@@ -1,4 +1,4 @@
-import { SourceMapConsumer } from "source-map";
+import { SourceMapConsumer } from 'source-map';
 
 export class ErrorMapper {
   // Cache consumer
@@ -68,7 +68,7 @@ export class ErrorMapper {
     return outStack;
   }
 
-  public static wrapLoop(loop: () => void): () => void {
+  public static wrapLoop(loop: (...args: any) => void): () => void {
     return () => {
       try {
         loop();
