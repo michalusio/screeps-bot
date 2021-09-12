@@ -1,4 +1,8 @@
+import { energyContainerNotFull, getByIdOrNew, moveTo, tryDoOrMove } from 'utils/creep-utils';
+
 import { CreepRoleMemory } from '../utils/creep-role-memory';
+
+const energyMargin = 2;
 
 export interface Miner extends Creep {
   memory: MinerMemory;
@@ -7,23 +11,30 @@ export interface Miner extends Creep {
 export interface MinerMemory extends CreepRoleMemory {
   role: 'miner';
 
-  sourcePoint: Id<Source> | undefined;
-  sourcePath: PathStep[] | undefined;
+  sourcePoint?: Id<Source>;
 
-  transferPoint: Id<StructureSpawn> | Id<StructureExtension>;
-  transferPath: PathStep[] | undefined;
+  transferPoint?: Id<StructureContainer> | Id<StructureSpawn> | Id<StructureExtension>;
 
   state: 'mining' | 'transfering';
 }
 
-export const minerBody = [WORK, MOVE, CARRY];
-export const minerMemory = {
+export const minerBody = (energyAvailable: number) => {
+  const body: BodyPartConstant[] = [];
+  let energy = energyAvailable;
+  while (energy >= 200) {
+    body.push(WORK);
+    body.push(CARRY);
+    body.push(MOVE);
+    energy -= 200;
+  }
+  return body;
+};
+
+export const minerMemory: MinerMemory = {
   newCreep: true,
   role: 'miner',
   sourcePoint: undefined,
-  sourcePath: undefined,
   transferPoint: undefined,
-  transferPath: undefined,
   state: 'mining'
 };
 
@@ -31,42 +42,31 @@ export function minerBehavior(creep: Creep): void {
   const miner = creep as Miner;
   const creepMemory = miner.memory;
   switch (creepMemory.state) {
+
     case 'mining':
-      const source = (creepMemory.sourcePoint
-      ? Game.getObjectById(creepMemory.sourcePoint)
-      : null) || miner.room.find(FIND_SOURCES_ACTIVE)[0];
+      const source = getByIdOrNew(creepMemory.sourcePoint, () => _.sample(miner.room.find(FIND_SOURCES_ACTIVE)));
       if (!source) break;
       creepMemory.sourcePoint = source.id;
-      const harvestCode = miner.harvest(source);
-      if (harvestCode === ERR_NOT_IN_RANGE) {
-        if (!creepMemory.sourcePath) {
-          creepMemory.sourcePath = miner.room.findPath(miner.pos, source.pos);
-        }
-        miner.moveByPath(creepMemory.sourcePath);
-      }
-      if (miner.store.energy >= miner.store.getCapacity()) {
+      tryDoOrMove(() => miner.harvest(source), moveTo(miner, source));
+      if (miner.store.getUsedCapacity(RESOURCE_ENERGY) + energyMargin >= miner.store.getCapacity()) {
         creepMemory.state = 'transfering';
-        creepMemory.transferPath = undefined;
+        creepMemory.transferPoint = undefined;
       }
       break;
+
     case 'transfering':
-      const transfer = (creepMemory.transferPoint
-        ? Game.getObjectById(creepMemory.transferPoint)
-        : null) || miner.room.find(FIND_MY_SPAWNS)[0];
-      // TODO: Add extension support for find
+      const transfer = getByIdOrNew(creepMemory.transferPoint, energyContainerNotFull(miner.room));
       if (!transfer) break;
       creepMemory.transferPoint = transfer.id;
-      const transferCode = miner.transfer(transfer, RESOURCE_ENERGY);
-      if (transferCode === ERR_NOT_IN_RANGE) {
-        if (!creepMemory.transferPath) {
-          creepMemory.transferPath = miner.room.findPath(miner.pos, transfer.pos);
-        }
-        miner.moveByPath(creepMemory.transferPath);
+      const transferCode = tryDoOrMove(() => miner.transfer(transfer, RESOURCE_ENERGY), moveTo(miner, transfer));
+      if (transferCode === ERR_FULL) {
+        creepMemory.transferPoint = undefined;
       }
-      if (miner.store.energy <= 0) {
+      if (miner.store.getUsedCapacity(RESOURCE_ENERGY) <= energyMargin) {
         creepMemory.state = 'mining';
-        creepMemory.sourcePath = undefined;
+        creepMemory.sourcePoint = undefined;
       }
       break;
+
   }
 }

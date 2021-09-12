@@ -1,6 +1,8 @@
 declare global {
   interface Memory {
-    creepIndex: number;
+    creepIndex?: number;
+    civilizationLevel?: number;
+    stageIndex?: number;
   }
 }
 

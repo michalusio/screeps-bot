@@ -19,7 +19,7 @@ export function wrapWithCount(loop: (creepCount: CreepCounter) => void): () => v
       else {
         creepCount.overall++;
         const creepMemory = Memory.creeps[name] as CreepRoleMemory;
-        if (creepMemory.role) {
+        if (creepMemory.role && (Game.creeps[name].ticksToLive ?? 600) > 100) {
           creepCount.perRole[creepMemory.role] =
           (creepCount.perRole[creepMemory.role] ?? 0) + 1;
         }

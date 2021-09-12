@@ -6,23 +6,37 @@ type Stage = { [key: string]: number; };
 const stages: Stage[] = [
   { miner: 2 },
   { miner: 2, upgrader: 1 },
-  { miner: 2, upgrader: 2 },
+  { miner: 2, upgrader: 1, defender: 1 },
+  { miner: 3, upgrader: 2, defender: 1, builder: 1 },
+  { miner: 4, upgrader: 2, defender: 1, builder: 2 },
+  { miner: 5, upgrader: 2, defender: 2, builder: 3 },
+  { miner: 5, upgrader: 3, defender: 2, builder: 3 },
 ]
 
 export function wrapWithStages(loop: (creepCount: CreepCounter) => void): (creepCount: CreepCounter) => void {
   return (creepCount: CreepCounter) => {
+    Memory.stageIndex = getCurrentStageIndex(creepCount);
+
     loop(creepCount);
 
-    const stageIndex = getCurrentStageIndex(creepCount);
-    const nextRequirements = getNextStageDelta(stageIndex, creepCount);
+    Memory.civilizationLevel = (Memory.civilizationLevel != null)
+    ? (Memory.civilizationLevel + Memory.stageIndex) / 2
+    : 0;
+    Memory.civilizationLevel = Math.floor(Memory.civilizationLevel * 100) / 100;
+
+    const nextRequirements = getNextStageDelta(Memory.stageIndex, creepCount);
 
     for (const spawns in Game.spawns) {
       const spawn = Game.spawns[spawns];
-      if (!spawn.spawning) {
+      if (!spawn.spawning && spawn.room.energyAvailable > civilizationEnergyLevel()) {
         spawnRequirement(spawn, nextRequirements);
       }
     }
   }
+}
+
+export function civilizationEnergyLevel(): number {
+  return 200 + Math.floor((Memory.civilizationLevel ?? 0) * 50);
 }
 
 function spawnRequirement(spawn: StructureSpawn, requirements: Stage): void {
@@ -39,7 +53,7 @@ function spawnRequirement(spawn: StructureSpawn, requirements: Stage): void {
   if (!requiredRole) { return; }
   const body = roleUtilities[requiredRole][0];
   const memory = roleUtilities[requiredRole][1];
-  if (spawn.spawnCreep(body, `${requiredRole}-${Memory.creepIndex}`, { memory }) === OK) {
+  if (spawn.spawnCreep(body(spawn.room.energyAvailable), `${requiredRole}-${Memory.creepIndex}`, { memory }) === OK) {
     requirements[requiredRole]--;
   }
 }

@@ -1,3 +1,5 @@
+import { energyContainerNotEmpty, getByIdOrNew, moveTo, tryDoOrMove } from 'utils/creep-utils';
+
 import { CreepRoleMemory } from '../utils/creep-role-memory';
 
 export interface Upgrader extends Creep {
@@ -7,23 +9,30 @@ export interface Upgrader extends Creep {
 export interface UpgraderMemory extends CreepRoleMemory {
   role: 'upgrader';
 
-  sourcePoint: Id<StructureSpawn> | undefined;
-  sourcePath: PathStep[] | undefined;
+  sourcePoint?: Id<StructureStorage> | Id<StructureContainer>;
 
-  upgradePoint: Id<StructureController> | undefined;
-  upgradePath: PathStep[] | undefined;
+  upgradePoint?: Id<StructureController>;
 
   state: 'upgrading' | 'sourcing';
 }
 
-export const upgraderBody = [WORK, MOVE, CARRY];
-export const upgraderMemory = {
+export const upgraderBody = (energyAvailable: number) => {
+  const body: BodyPartConstant[] = [];
+  let energy = energyAvailable;
+  while (energy >= 200) {
+    body.push(WORK);
+    body.push(CARRY);
+    body.push(MOVE);
+    energy -= 200;
+  }
+  return body;
+};
+
+export const upgraderMemory: UpgraderMemory = {
   newCreep: true,
   role: 'upgrader',
   sourcePoint: undefined,
-  sourcePath: undefined,
   upgradePoint: undefined,
-  upgradePath: undefined,
   state: 'sourcing'
 };
 
@@ -31,42 +40,26 @@ export function upgraderBehavior(creep: Creep): void {
   const upgrader = creep as Upgrader;
   const creepMemory = upgrader.memory;
   switch (creepMemory.state) {
+
     case 'sourcing':
-      const source = (creepMemory.sourcePoint
-      ? Game.getObjectById(creepMemory.sourcePoint)
-      : null) || upgrader.room.find(FIND_MY_SPAWNS)[0];
+      const source = getByIdOrNew(creepMemory.sourcePoint, energyContainerNotEmpty(upgrader.room));
       if (!source) break;
       creepMemory.sourcePoint = source.id;
-      const withdrawCode = upgrader.withdraw(source, RESOURCE_ENERGY);
-      if (withdrawCode === ERR_NOT_IN_RANGE) {
-        if (!creepMemory.sourcePath) {
-          creepMemory.sourcePath = upgrader.room.findPath(upgrader.pos, source.pos);
-        }
-        upgrader.moveByPath(creepMemory.sourcePath);
-      }
-      if (upgrader.store.energy >= upgrader.store.getCapacity()) {
+      tryDoOrMove(() => upgrader.withdraw(source, RESOURCE_ENERGY), moveTo(upgrader, source));
+      if (upgrader.store.getUsedCapacity(RESOURCE_ENERGY) >= upgrader.store.getCapacity()) {
         creepMemory.state = 'upgrading';
-        creepMemory.upgradePath = undefined;
       }
       break;
+
     case 'upgrading':
-      const transfer = (creepMemory.upgradePoint
-        ? Game.getObjectById(creepMemory.upgradePoint)
-        : null) || upgrader.room.controller;
-      // TODO: Add extension support for find
-      if (!transfer) break;
-      creepMemory.upgradePoint = transfer.id;
-      const transferCode = upgrader.upgradeController(transfer);
-      if (transferCode === ERR_NOT_IN_RANGE) {
-        if (!creepMemory.upgradePath) {
-          creepMemory.upgradePath = upgrader.room.findPath(upgrader.pos, transfer.pos);
-        }
-        upgrader.moveByPath(creepMemory.upgradePath);
-      }
-      if (upgrader.store.energy <= 0) {
+      const controller = upgrader.room.controller;;
+      if (!controller) break;
+      creepMemory.upgradePoint = controller.id;
+      tryDoOrMove(() => upgrader.upgradeController(controller), moveTo(upgrader, controller));
+      if (upgrader.store.getUsedCapacity(RESOURCE_ENERGY) <= 0) {
         creepMemory.state = 'sourcing';
-        creepMemory.sourcePath = undefined;
       }
       break;
+
   }
 }
