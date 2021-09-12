@@ -23,7 +23,7 @@ export function structuresToRepair(room: Room): AnyStructure[] {
 export function energyContainerNotEmpty(room: Room): () => StructureContainer | StructureStorage | undefined {
   return () => _.sample(_.sortBy(_.filter<StructureContainer | StructureStorage>(room.find(FIND_STRUCTURES),
   isEnergyStorageAnd(s => s.store.getUsedCapacity(RESOURCE_ENERGY) > 200)
-), s => s.structureType));
+), s => s.structureType)) || _.sample(room.find(FIND_MY_SPAWNS));
 }
 
 export function energyContainerNotFull(room: Room): () => StructureContainer | StructureExtension | StructureSpawn | undefined {
@@ -42,4 +42,10 @@ function isEnergyStorageAnd(predicate: (s: StructureStorage | StructureContainer
   return (s: StructureStorage | StructureContainer) =>
     ((s.structureType === 'storage' && s.my) || s.structureType === 'container')
     && predicate(s);
+}
+
+export function freeSpaceAround(pos: RoomPosition, room: Room): number {
+  var fields = room.lookForAtArea(LOOK_TERRAIN, pos.y-1, pos.x-1, pos.y+1, pos.x+1, true);
+  var creeps = room.lookForAtArea(LOOK_CREEPS, pos.y-1, pos.x-1, pos.y+1, pos.x+1, true);
+  return 10-_.countBy( fields , f => f.terrain ).wall - creeps.length;
 }

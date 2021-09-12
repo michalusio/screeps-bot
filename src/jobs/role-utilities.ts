@@ -2,6 +2,7 @@ import { CreepRoleMemory } from 'utils/creep-role-memory';
 
 import { builderBehavior, builderBody, builderMemory } from './builder';
 import { defenderBehavior, defenderBody, defenderMemory } from './defender';
+import { haulerBehavior, haulerBody, haulerMemory } from './hauler';
 import { minerBehavior, minerBody, minerMemory } from './miner';
 import { upgraderBehavior, upgraderBody, upgraderMemory } from './upgrader';
 
@@ -17,5 +18,6 @@ export const roleUtilities: Roles = {
   miner: [minerBody, minerMemory, minerBehavior],
   upgrader: [upgraderBody, upgraderMemory, upgraderBehavior],
   builder: [builderBody, builderMemory, builderBehavior],
-  defender: [defenderBody, defenderMemory, defenderBehavior]
+  defender: [defenderBody, defenderMemory, defenderBehavior],
+  hauler: [haulerBody, haulerMemory, haulerBehavior]
 }

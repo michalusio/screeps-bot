@@ -4,13 +4,13 @@ import { CreepCounter } from './creep-counting';
 
 type Stage = { [key: string]: number; };
 const stages: Stage[] = [
-  { miner: 2 },
-  { miner: 2, upgrader: 1 },
-  { miner: 2, upgrader: 1, defender: 1 },
-  { miner: 3, upgrader: 2, defender: 1, builder: 1 },
-  { miner: 4, upgrader: 2, defender: 1, builder: 2 },
-  { miner: 5, upgrader: 2, defender: 2, builder: 3 },
-  { miner: 5, upgrader: 3, defender: 2, builder: 3 },
+  { miner: 1, hauler: 1 },
+  { miner: 2, hauler: 2, upgrader: 1 },
+  { miner: 2, hauler: 2, upgrader: 1, defender: 1 },
+  { miner: 2, hauler: 2, upgrader: 2, defender: 1, builder: 1 },
+  { miner: 2, hauler: 2, upgrader: 2, defender: 1, builder: 2 },
+  { miner: 2, hauler: 2, upgrader: 2, defender: 2, builder: 3 },
+  { miner: 2, hauler: 2, upgrader: 2, defender: 2, builder: 3 },
 ]
 
 export function wrapWithStages(loop: (creepCount: CreepCounter) => void): (creepCount: CreepCounter) => void {
@@ -28,7 +28,7 @@ export function wrapWithStages(loop: (creepCount: CreepCounter) => void): (creep
 
     for (const spawns in Game.spawns) {
       const spawn = Game.spawns[spawns];
-      if (!spawn.spawning && spawn.room.energyAvailable > civilizationEnergyLevel()) {
+      if (!spawn.spawning && spawn.room.energyAvailable >= Math.max(spawn.room.energyCapacityAvailable, civilizationEnergyLevel())) {
         spawnRequirement(spawn, nextRequirements);
       }
     }
