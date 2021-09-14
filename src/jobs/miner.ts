@@ -41,7 +41,11 @@ export function minerBehavior(creep: Creep): void {
       if (miner.store.energy > 0) miner.drop(RESOURCE_ENERGY);
       const source = getByIdOrNew(creepMemory.sourcePoint, () => _.sample(miner.room.find(FIND_SOURCES_ACTIVE)));
       if (!source) break;
-      if (freeSpaceAround(source.pos, source.room) === 0) {
+      if (source.energy === 0 && Math.random() < source.ticksToRegeneration / 300.0) {
+        creepMemory.sourcePoint = undefined;
+        break;
+      }
+      if (source.pos.getRangeTo(miner.pos) > 1.4 && freeSpaceAround(source.pos, source.room) === 0) {
         creepMemory.sourcePoint = undefined;
         break;
       }

@@ -12,7 +12,7 @@ export function renewIfNotBusy(): void {
         spawn.recycleCreep(creep);
         break;
       }
-      if (costOf(creep) < Math.max(spawn.room.energyCapacityAvailable, civilizationEnergyLevel())/2) {
+      if (costOf(creep) < Math.min(spawn.room.energyCapacityAvailable, civilizationEnergyLevel())/2) {
         continue;
       }
       if (spawn.renewCreep(creep) === OK) break;

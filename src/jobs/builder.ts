@@ -1,6 +1,6 @@
 import { energyContainerNotEmpty, getByIdOrNew, moveTo, structuresToRepair, tryDoOrMove } from 'utils/creep-utils';
 
-import { CreepRoleMemory } from '../utils/creep-role-memory';
+import { CreepRoleMemory, stateChanger } from '../utils/creep-role-memory';
 
 export interface Builder extends Creep {
   memory: BuilderMemory;
@@ -9,7 +9,7 @@ export interface Builder extends Creep {
 export interface BuilderMemory extends CreepRoleMemory {
   role: 'builder';
 
-  sourcePoint?: Id<StructureStorage> | Id<StructureContainer>;
+  sourcePoint?: Id<StructureStorage> | Id<StructureContainer> | Id<StructureSpawn> | Id<Ruin>;
 
   buildPoint?: Id<ConstructionSite>;
   repairPoint?: Id<AnyStructure>;
@@ -18,13 +18,13 @@ export interface BuilderMemory extends CreepRoleMemory {
 }
 
 export const builderBody = (energyAvailable: number) => {
-  const body: BodyPartConstant[] = [];
-  let energy = energyAvailable;
-  while (energy >= 200) {
+  if (energyAvailable < BODYPART_COST[MOVE]) return [];
+  const body: BodyPartConstant[] = [MOVE];
+  let energy = energyAvailable - BODYPART_COST[MOVE];
+  while (energy >= 150) {
     body.push(WORK);
     body.push(CARRY);
-    body.push(MOVE);
-    energy -= 200;
+    energy -= 150;
   }
   return body;
 };
@@ -43,7 +43,7 @@ export function builderBehavior(creep: Creep): void {
   switch (creepMemory.state) {
 
     case 'sourcing':
-      const source = getByIdOrNew(creepMemory.sourcePoint, energyContainerNotEmpty(builder.room));
+      const source = getByIdOrNew<StructureStorage | StructureContainer | StructureSpawn | Ruin>(creepMemory.sourcePoint, () => _.sample(builder.room.find(FIND_RUINS, {filter: r => r.store.getUsedCapacity(RESOURCE_ENERGY) > 0})) ?? energyContainerNotEmpty(builder)());
       if (!source) {
         if (Game.time % 3 === 0) {
           builder.move((Math.floor(Math.random() * 8)+1) as DirectionConstant);
@@ -58,26 +58,26 @@ export function builderBehavior(creep: Creep): void {
       tryDoOrMove(() => builder.withdraw(source, RESOURCE_ENERGY), moveTo(builder, source));
       if (builder.store.getUsedCapacity(RESOURCE_ENERGY) >= builder.store.getCapacity()) {
         if (creepMemory.repairPoint || structuresToRepair(builder.room).length > 0) {
-          creepMemory.state = 'repairing';
+          changeState('repairing', builder);
+          //changeState('building', builder);
         }
         else {
-          creepMemory.state = 'building';
+          changeState('building', builder);
         }
       }
       break;
 
     case 'building':
       {
-        const site = getByIdOrNew(creepMemory.buildPoint, () => _.min(builder.room.find(FIND_CONSTRUCTION_SITES), s => s.progressTotal - s.progress));
+        const site = getByIdOrNew(creepMemory.buildPoint, () => _.min(builder.room.find(FIND_CONSTRUCTION_SITES), s => (s.progressTotal - s.progress) + s.pos.getRangeTo(builder) * 100));
         if (!site) {
-          creepMemory.buildPoint = undefined;
-          creepMemory.state = 'sourcing';
+          changeState('sourcing', builder);
           break;
         };
         creepMemory.buildPoint = site.id;
         tryDoOrMove(() => builder.build(site), moveTo(builder, site));
         if (builder.store.getUsedCapacity(RESOURCE_ENERGY) <= 0) {
-          creepMemory.state = 'sourcing';
+          changeState('sourcing', builder);
         }
       }
       break;
@@ -86,18 +86,18 @@ export function builderBehavior(creep: Creep): void {
     case 'repairing':
       {
         const site = getByIdOrNew(creepMemory.repairPoint, () => _.sample(structuresToRepair(builder.room)));
-        if (!site) break;
-        if (site.hits >= site.hitsMax) {
-          creepMemory.repairPoint = undefined;
-          creepMemory.state = 'sourcing';
+        if (!site || site.hits >= site.hitsMax) {
+          changeState('sourcing', builder);
           break;
         }
         creepMemory.repairPoint = site.id;
         tryDoOrMove(() => builder.repair(site), moveTo(builder, site));
         if (builder.store.getUsedCapacity(RESOURCE_ENERGY) <= 0) {
-          creepMemory.state = 'sourcing';
+          changeState('sourcing', builder);
         }
       }
       break;
   }
 }
+
+const changeState = stateChanger<BuilderMemory>('buildPoint', 'repairPoint', 'sourcePoint');

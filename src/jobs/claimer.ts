@@ -1,36 +1,24 @@
 import { CreepRoleMemory } from '../utils/creep-role-memory';
 
-export interface Defender extends Creep {
-  memory: DefenderMemory;
+export interface Claimer extends Creep {
+  memory: ClaimerMemory;
 }
 
-export interface DefenderMemory extends CreepRoleMemory {
-  role: 'defender';
+export interface ClaimerMemory extends CreepRoleMemory {
+  role: 'claimer';
 
-  attackTarget?: Id<Creep>;
-  ticksInPeace?: number;
+  claimedRoomName?: string;
 
-  state: 'fighting' | 'scouting';
+  state: 'claiming' | 'idling';
 }
 
-export const defenderBody = (energyAvailable: number) => {
+export const claimerBody = (energyAvailable: number) => {
   const body: BodyPartConstant[] = [];
   let energy = energyAvailable;
   let times = 0;
   while (energy >= 180) {
     times++;
     energy -= 180;
-  }
-  for (let i = 0; i < times; i++) {
-    body.push(TOUGH);
-    body.push(TOUGH);
-    body.push(TOUGH);
-    body.push(TOUGH);
-    body.push(TOUGH);
-  }
-  for (let i = 0; i < times; i++) {
-    body.push(MOVE);
-    body.push(ATTACK);
   }
   return body;
 };

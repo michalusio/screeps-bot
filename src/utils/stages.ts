@@ -1,6 +1,7 @@
 import { roleUtilities } from 'jobs/role-utilities';
 
 import { CreepCounter } from './creep-counting';
+import { log } from './log';
 
 type Stage = { [key: string]: number; };
 const stages: Stage[] = [
@@ -8,9 +9,9 @@ const stages: Stage[] = [
   { miner: 2, hauler: 2, upgrader: 1 },
   { miner: 2, hauler: 2, upgrader: 1, defender: 1 },
   { miner: 2, hauler: 2, upgrader: 2, defender: 1, builder: 1 },
-  { miner: 2, hauler: 2, upgrader: 2, defender: 1, builder: 2 },
-  { miner: 2, hauler: 2, upgrader: 2, defender: 2, builder: 3 },
-  { miner: 2, hauler: 2, upgrader: 2, defender: 2, builder: 3 },
+  { miner: 3, hauler: 2, upgrader: 2, defender: 1, builder: 3 },
+  { miner: 3, hauler: 3, upgrader: 2, defender: 2, builder: 3 },
+  { miner: 3, hauler: 3, upgrader: 3, defender: 2, builder: 3 },
 ]
 
 export function wrapWithStages(loop: (creepCount: CreepCounter) => void): (creepCount: CreepCounter) => void {
@@ -28,7 +29,7 @@ export function wrapWithStages(loop: (creepCount: CreepCounter) => void): (creep
 
     for (const spawns in Game.spawns) {
       const spawn = Game.spawns[spawns];
-      if (!spawn.spawning && spawn.room.energyAvailable >= Math.max(spawn.room.energyCapacityAvailable, civilizationEnergyLevel())) {
+      if (!spawn.spawning && spawn.room.energyAvailable >= Math.min(spawn.room.energyCapacityAvailable, civilizationEnergyLevel())) {
         spawnRequirement(spawn, nextRequirements);
       }
     }
@@ -36,7 +37,7 @@ export function wrapWithStages(loop: (creepCount: CreepCounter) => void): (creep
 }
 
 export function civilizationEnergyLevel(): number {
-  return 200 + Math.floor((Memory.civilizationLevel ?? 0) * 50);
+  return 150 + Math.floor((Memory.civilizationLevel ?? 0) * 50);
 }
 
 function spawnRequirement(spawn: StructureSpawn, requirements: Stage): void {
@@ -44,18 +45,24 @@ function spawnRequirement(spawn: StructureSpawn, requirements: Stage): void {
   for (const role in requirements) {
     if (requirements[role] <= 0) { continue; }
     if (!roleUtilities[role]) {
-      console.log(`No role utilities for ${role}`);
+      log(`No role utilities for ${role}`);
       return;
     }
     requiredRole = role;
     break;
   }
+
   if (!requiredRole) { return; }
-  const body = roleUtilities[requiredRole][0];
+  const body = roleUtilities[requiredRole][0](spawn.room.energyAvailable);
+  body.length = Math.min(body.length, 50);
+
   const memory = roleUtilities[requiredRole][1];
-  if (spawn.spawnCreep(body(spawn.room.energyAvailable), `${requiredRole}-${Memory.creepIndex}`, { memory }) === OK) {
+
+  const spawnCode = spawn.spawnCreep(body, `${requiredRole}-${Memory.creepIndex}`, { memory });
+  if (spawnCode === OK) {
     requirements[requiredRole]--;
   }
+  else log(`Encountered a problem with spawning a ${requiredRole}: ${spawnCode}`);
 }
 
 function getCurrentStageIndex(creepCount: CreepCounter): number {
