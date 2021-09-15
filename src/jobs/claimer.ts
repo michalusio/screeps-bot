@@ -1,4 +1,4 @@
-import { CreepRoleMemory } from '../utils/creep-role-memory';
+import { CreepRoleMemory } from '../utils/creeps/role-memory';
 
 export interface Claimer extends Creep {
   memory: ClaimerMemory;
@@ -23,54 +23,20 @@ export const claimerBody = (energyAvailable: number) => {
   return body;
 };
 
-export const defenderMemory: DefenderMemory = {
+export const claimerMemory: ClaimerMemory = {
   newCreep: true,
-  role: 'defender',
-  attackTarget: undefined,
-  ticksInPeace: undefined,
-  state: 'scouting'
+  role: 'claimer',
+  claimedRoomName: undefined,
+  state: 'idling'
 };
 
-export function defenderBehavior(creep: Creep): void {
-  const defender = creep as Defender;
-  const creepMemory = defender.memory;
+export function claimerBehavior(creep: Creep): void {
+  const claimer = creep as Claimer;
+  const creepMemory = claimer.memory;
   switch (creepMemory.state) {
 
-    case 'scouting':
-      {
-        const enemy = creep.pos.findClosestByRange(FIND_HOSTILE_CREEPS);
-        if (!enemy) {
-          creepMemory.ticksInPeace = (creepMemory.ticksInPeace ?? 0) + 1;
-          if (creepMemory.ticksInPeace >= 10 && creep.hitsMax/2 > creep.hits) {
-            creep.suicide();
-          }
-          if (!defender.fatigue) {
-            defender.move((Math.floor(Math.random() * 8)+1) as DirectionConstant);
-          }
-          break;
-        }
-        creepMemory.attackTarget = enemy.id;
-        creepMemory.ticksInPeace = 0;
-        creepMemory.state = 'fighting';
-      }
-      break;
+    case 'idling':
 
-    case 'fighting':
-      {
-        if (!creepMemory.attackTarget) {
-          creepMemory.state = 'scouting';
-          break;
-        }
-        const enemy = Game.getObjectById(creepMemory.attackTarget);
-        if (!enemy) {
-          creepMemory.state = 'scouting';
-          creepMemory.attackTarget = undefined;
-          break;
-        }
-        if (creep.attack(enemy) === ERR_NOT_IN_RANGE) {
-          creep.moveTo(enemy);
-        }
-      }
       break;
 
   }

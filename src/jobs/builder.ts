@@ -1,6 +1,6 @@
-import { energyContainerNotEmpty, getByIdOrNew, moveTo, structuresToRepair, tryDoOrMove } from 'utils/creep-utils';
+import { energyContainerNotEmpty, getByIdOrNew, moveTo, structuresToRepair, tryDoOrMove } from 'utils/creeps';
 
-import { CreepRoleMemory, stateChanger } from '../utils/creep-role-memory';
+import { CreepRoleMemory, stateChanger } from '../utils/creeps/role-memory';
 
 export interface Builder extends Creep {
   memory: BuilderMemory;
@@ -9,7 +9,7 @@ export interface Builder extends Creep {
 export interface BuilderMemory extends CreepRoleMemory {
   role: 'builder';
 
-  sourcePoint?: Id<StructureStorage> | Id<StructureContainer> | Id<StructureSpawn> | Id<Ruin>;
+  sourcePoint?: Id<StructureStorage | StructureContainer | StructureSpawn | Ruin>;
 
   buildPoint?: Id<ConstructionSite>;
   repairPoint?: Id<AnyStructure>;
@@ -59,7 +59,6 @@ export function builderBehavior(creep: Creep): void {
       if (builder.store.getUsedCapacity(RESOURCE_ENERGY) >= builder.store.getCapacity()) {
         if (creepMemory.repairPoint || structuresToRepair(builder.room).length > 0) {
           changeState('repairing', builder);
-          //changeState('building', builder);
         }
         else {
           changeState('building', builder);

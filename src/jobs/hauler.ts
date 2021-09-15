@@ -1,6 +1,6 @@
-import { energyContainerNotFull, getByIdOrNew, moveTo, tryDoOrMove } from 'utils/creep-utils';
+import { energyContainerNotFull, getByIdOrNew, moveTo, tryDoOrMove } from 'utils/creeps';
 
-import { CreepRoleMemory, stateChanger } from '../utils/creep-role-memory';
+import { CreepRoleMemory, stateChanger } from '../utils/creeps/role-memory';
 
 export interface Hauler extends Creep {
   memory: HaulerMemory;
@@ -11,7 +11,7 @@ export interface HaulerMemory extends CreepRoleMemory {
 
   energyPoint?: Id<Resource>;
 
-  storagePoint?: Id<StructureStorage> | Id<StructureSpawn> | Id<StructureContainer> | Id<StructureExtension>;
+  storagePoint?: Id<StructureStorage | StructureSpawn | StructureContainer | StructureExtension>;
 
   state: 'getting' | 'storing';
 }

@@ -1,4 +1,4 @@
-import { CreepRoleMemory } from '../utils/creep-role-memory';
+import { CreepRoleMemory } from '../utils/creeps/role-memory';
 
 export interface Defender extends Creep {
   memory: DefenderMemory;

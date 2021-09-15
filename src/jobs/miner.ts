@@ -1,6 +1,6 @@
-import { freeSpaceAround, getByIdOrNew, moveTo, tryDoOrMove } from 'utils/creep-utils';
+import { freeSpaceAround, getByIdOrNew, moveTo, tryDoOrMove } from 'utils/creeps';
 
-import { CreepRoleMemory } from '../utils/creep-role-memory';
+import { CreepRoleMemory } from '../utils/creeps/role-memory';
 
 export interface Miner extends Creep {
   memory: MinerMemory;

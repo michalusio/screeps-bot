@@ -1,10 +1,9 @@
-import { CreepRoleMemory } from './creep-role-memory';
+import { CreepRoleMemory } from './creeps/role-memory';
 
 declare global {
   interface Memory {
     creepIndex?: number;
-    civilizationLevel?: number;
-    stageIndex?: number;
+    civilizationLevel: { [roomName: string]: number };
   }
 
   interface Creep {

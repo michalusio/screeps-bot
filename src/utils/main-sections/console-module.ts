@@ -1,21 +1,19 @@
+import { messages } from '../log';
 import { CreepCounter } from './creep-counting';
-import { messages } from './log';
 import { civilizationEnergyLevel } from './stages';
 
 export function logging(creepCount: CreepCounter): void {
-  const stageIndex = Memory.stageIndex ?? 0;
+  let roles: string[] = [];
+  creepCount.forEach(roomCounter => roles = _.union(roles, _.keys(roomCounter.perRole)));
+
   const style = 'style="border: 4px double white;"';
   const style2 = 'style="border: 2px solid white;text-align:center;min-width: 64px;"';
+
+  let rows: string = '';
+  creepCount.forEach((room, roomName) => rows += `<tr ${style}><td ${style2}>${roomName}</td><td ${style2}>${civilizationEnergyLevel(roomName)}</td><td ${style2}>${room.overall}</td>${roles.map(value => `<td ${style2}>${room.perRole[value] ?? 0}</td>`).join('')}</tr>`);
+
   const firstColumn = `
-  Current stage: ${stageIndex}
-
-  Civilization level: ${Memory.civilizationLevel} (${civilizationEnergyLevel()} energy)
-
-
-
-
-
-  <table ${style}><tr ${style}><th ${style2}>Overall</th>${_.keys(creepCount.perRole).map(value => `<th ${style2}>${value}</th>`).join('')}</tr><tr ${style}><td ${style2}>${creepCount.overall}</td>${_.keys(creepCount.perRole).map(value => `<td ${style2}>${creepCount.perRole[value]}</td>`).join('')}</tr></table>`;
+  <table ${style}><tr ${style}><th ${style2}>Room</th><th ${style2}>E-Level</th><th ${style2}>Total</th>${roles.map(value => `<th ${style2}>${value}</th>`).join('')}</tr>${rows}</table>`;
 
   const messageDiv = `<div style="width:90%;height:90%;display:inline-block;border:2px solid blue;position:absolute;top:16px;left:calc(100% + 16px);">Messages:\n${messages.join('\n')}</div>`;
 

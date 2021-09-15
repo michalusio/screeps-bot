@@ -1,27 +1,3 @@
-export type MoveToReturnCode = CreepMoveReturnCode | -2 | -5 | -7;
-
-export function getByIdOrNew<T>(id: Id<T> | undefined, getNew: () => T | undefined): T | undefined {
-  return (id ? Game.getObjectById(id) : undefined) || getNew();
-}
-
-export function tryDoOrMove(doAction: () => ScreepsReturnCode, doMove: () => MoveToReturnCode): ScreepsReturnCode {
-  const doCode = doAction();
-  if (doCode === ERR_NOT_IN_RANGE) {
-    return doMove();
-  }
-  return doCode;
-}
-
-export function moveTo(creep: Creep, target: RoomPosition | { pos: RoomPosition }, avoid?: (room: Room) => RoomPosition[]): () => MoveToReturnCode {
-  const avoided = avoid?.call(undefined, creep.room) ?? [];
-  const costCallback = (name: string, matrix: CostMatrix) => avoided.filter(a => a.roomName === name).forEach(a => matrix.set(a.x, a.y, Number.MAX_VALUE));
-  return () => creep.fatigue === 0 ? creep.moveTo(target, { reusePath: 5, visualizePathStyle: { stroke: '#ffaa00' }, costCallback }) : ERR_TIRED;
-}
-
-export function structuresToRepair(room: Room): AnyStructure[] {
-  return room.find(FIND_STRUCTURES, { filter: (s) => s.hitsMax/2 > s.hits });
-}
-
 const fillPriority = {
   'spawn': 1,
   'extension': 2,
@@ -70,10 +46,4 @@ function isEnergyStorageAnd(predicate?: (s: StructureStorage | StructureContaine
   return (s: AnyStructure) =>
     ((s.structureType === 'storage' && s.my) || s.structureType === 'container')
     && (predicate ? predicate(s) : true);
-}
-
-export function freeSpaceAround(pos: RoomPosition, room: Room): number {
-  var fields = room.lookForAtArea(LOOK_TERRAIN, pos.y-1, pos.x-1, pos.y+1, pos.x+1, true);
-  var creeps = room.lookForAtArea(LOOK_CREEPS, pos.y-1, pos.x-1, pos.y+1, pos.x+1, true);
-  return 9-_.countBy( fields , f => f.terrain ).wall - creeps.length;
 }

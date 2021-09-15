@@ -1,6 +1,6 @@
-import { energyContainerNotEmpty, getByIdOrNew, moveTo, tryDoOrMove } from 'utils/creep-utils';
+import { energyContainerNotEmpty, getByIdOrNew, moveTo, tryDoOrMove } from 'utils/creeps';
 
-import { CreepRoleMemory, stateChanger } from '../utils/creep-role-memory';
+import { CreepRoleMemory, stateChanger } from '../utils/creeps/role-memory';
 
 export interface Upgrader extends Creep {
   memory: UpgraderMemory;
@@ -9,7 +9,7 @@ export interface Upgrader extends Creep {
 export interface UpgraderMemory extends CreepRoleMemory {
   role: 'upgrader';
 
-  sourcePoint?: Id<StructureStorage> | Id<StructureContainer> | Id<StructureSpawn>;
+  sourcePoint?: Id<StructureStorage | StructureContainer | StructureSpawn>;
 
 
   state: 'upgrading' | 'sourcing';
