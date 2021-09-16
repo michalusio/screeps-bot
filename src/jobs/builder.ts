@@ -21,7 +21,7 @@ export const builderBody = (energyAvailable: number) => {
   if (energyAvailable < BODYPART_COST[MOVE]) return [];
   const body: BodyPartConstant[] = [MOVE];
   let energy = energyAvailable - BODYPART_COST[MOVE];
-  while (energy >= 150) {
+  while (energy >= 150 && body.length < 49) {
     body.push(WORK);
     body.push(CARRY);
     energy -= 150;
@@ -46,12 +46,12 @@ export function builderBehavior(creep: Creep): void {
       const source = getByIdOrNew<StructureStorage | StructureContainer | StructureSpawn | Ruin>(creepMemory.sourcePoint, () => _.sample(builder.room.find(FIND_RUINS, {filter: r => r.store.getUsedCapacity(RESOURCE_ENERGY) > 0})) ?? energyContainerNotEmpty(builder)());
       if (!source) {
         if (Game.time % 3 === 0) {
-          builder.move((Math.floor(Math.random() * 8)+1) as DirectionConstant);
+          builder.wander();
         }
         break;
       }
       if (source.store.getUsedCapacity(RESOURCE_ENERGY) < 200) {
-        creepMemory.sourcePoint = undefined;
+        changeState('sourcing', builder, true);
         break;
       }
       creepMemory.sourcePoint = source.id;
@@ -70,7 +70,7 @@ export function builderBehavior(creep: Creep): void {
       {
         const site = getByIdOrNew(creepMemory.buildPoint, () => _.min(builder.room.find(FIND_CONSTRUCTION_SITES), s => (s.progressTotal - s.progress) + s.pos.getRangeTo(builder) * 100));
         if (!site) {
-          changeState('sourcing', builder);
+          changeState('sourcing', builder, true);
           break;
         };
         creepMemory.buildPoint = site.id;
@@ -86,7 +86,7 @@ export function builderBehavior(creep: Creep): void {
       {
         const site = getByIdOrNew(creepMemory.repairPoint, () => _.sample(structuresToRepair(builder.room)));
         if (!site || site.hits >= site.hitsMax) {
-          changeState('sourcing', builder);
+          changeState('sourcing', builder, true);
           break;
         }
         creepMemory.repairPoint = site.id;

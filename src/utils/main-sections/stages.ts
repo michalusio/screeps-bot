@@ -1,17 +1,22 @@
 import { roleUtilities } from 'jobs/role-utilities';
+import { extensionPlacer } from 'placements/extension-placement';
+import { Placement } from 'placements/placement';
 
 import { log } from '../log';
 import { CreepCounter, RoomCreepCounter } from './creep-counting';
 
-type Stage = { [key: string]: number; };
+type RoleRequirements = { [key: string]: number; };
+
+type Stage = { roles: RoleRequirements, structures?: Placement[] };
+
 const stages: Stage[] = [
-  { miner: 1, hauler: 1 },
-  { miner: 2, hauler: 2, upgrader: 1 },
-  { miner: 2, hauler: 2, upgrader: 1, defender: 1 },
-  { miner: 2, hauler: 2, upgrader: 2, defender: 1, builder: 1 },
-  { miner: 3, hauler: 2, upgrader: 2, defender: 1, builder: 3 },
-  { miner: 3, hauler: 3, upgrader: 2, defender: 2, builder: 3 },
-  { miner: 3, hauler: 3, upgrader: 3, defender: 2, builder: 3, towerbro: 1 },
+  { roles: { miner: 1, hauler: 1 } },
+  { roles: { miner: 2, hauler: 2, upgrader: 1 } },
+  { roles: { defender: 1 }, structures: [extensionPlacer(5)] },
+  { roles: { upgrader: 2, builder: 1 } },
+  { roles: { miner: 3, builder: 2 }, structures: [extensionPlacer(20)] },
+  { roles: { defender: 2, hauler: 3 } },
+  { roles: { upgrader: 3, towerbro: 1 } },
 ]
 
 export function wrapWithStages(loop: (creepCount: CreepCounter) => void): (creepCount: CreepCounter) => void {
@@ -20,14 +25,20 @@ export function wrapWithStages(loop: (creepCount: CreepCounter) => void): (creep
       Memory.civilizationLevel = {};
     }
     creepCount.forEach((roomCounter, roomName) => {
-      const stageIndex = getCurrentStageIndex(roomCounter);
+      const room = Game.rooms[roomName];
 
-      const civLevel = ((Memory.civilizationLevel[roomName] ?? 0) + stageIndex) / 2;
+      const stageIndex = getCurrentStageIndex(room, roomCounter);
+
+      const civLevel = (Memory.civilizationLevel[roomName] ?? 0) * 0.9 + stageIndex * 0.1;
       Memory.civilizationLevel[roomName] = Math.floor(civLevel * 100) / 100;
 
-      const nextRequirements = getNextStageDelta(stageIndex, roomCounter);
+      const [nextRequirements, placementsToPlace] = getNextStageDelta(stageIndex, room, roomCounter);
 
-      Game.rooms[roomName]
+      if (placementsToPlace.length > 0 && room.find(FIND_MY_CONSTRUCTION_SITES).length === 0) {
+        _.first(placementsToPlace).place(room);
+      }
+
+      room
         .find(FIND_MY_SPAWNS)
         .filter(spawn => !spawn.spawning && spawn.room.energyAvailable >= Math.min(spawn.room.energyCapacityAvailable, civilizationEnergyLevel(roomName)))
         .forEach(spawn => spawnRequirement(spawn, nextRequirements));
@@ -41,7 +52,7 @@ export function civilizationEnergyLevel(roomName: string): number {
   return 150 + Math.floor((Memory.civilizationLevel[roomName] ?? 0) * 50);
 }
 
-function spawnRequirement(spawn: StructureSpawn, requirements: Stage): void {
+function spawnRequirement(spawn: StructureSpawn, requirements: RoleRequirements): void {
   let requiredRole: string = '';
   for (const role in requirements) {
     if (requirements[role] <= 0) { continue; }
@@ -66,28 +77,33 @@ function spawnRequirement(spawn: StructureSpawn, requirements: Stage): void {
   else log(`Encountered a problem with spawning a ${requiredRole}: ${spawnCode}`);
 }
 
-function getCurrentStageIndex(creepCount: RoomCreepCounter): number {
+function getCurrentStageIndex(room: Room, creepCount: RoomCreepCounter): number {
   let stageIndex = -1;
   for (const stage of stages) {
-    for (const role in stage) {
-      if ((creepCount.perRole[role] ?? 0) < stage[role]) {
+    for (const role in stage.roles) {
+      if ((creepCount.perRole[role] ?? 0) < stage.roles[role]) {
         return stageIndex;
       }
+    }
+    let index = 0;
+    for (const placement of (stage.structures || [])) {
+      if (Game.time % 10 === index && !placement.isPlaced(room)) return stageIndex;
+      index = (index + 1) % 10;
     }
     stageIndex++;
   }
   return stageIndex;
 }
 
-function getNextStageDelta(stageIndex: number, creepCount: RoomCreepCounter): Stage {
+function getNextStageDelta(stageIndex: number, room: Room, creepCount: RoomCreepCounter): [RoleRequirements, Placement[]] {
   const nextStage = stages[stageIndex + 1];
   if (!nextStage) {
-    return {};
+    return [{}, []];
   }
-  const currentStage = stages[stageIndex] ?? {};
-  const nextRequirements: Stage = {};
-  for (const role in {...currentStage, ...nextStage}) {
-    nextRequirements[role] = Math.max(0, (nextStage[role] ?? 0) - (creepCount.perRole[role] ?? 0));
+  const currentStage = stages[stageIndex]?.roles ?? {};
+  const nextRequirements: RoleRequirements = {};
+  for (const role in {...currentStage, ...nextStage.roles}) {
+    nextRequirements[role] = Math.max(0, (nextStage.roles[role] ?? 0) - (creepCount.perRole[role] ?? 0));
   }
-  return nextRequirements;
+  return [nextRequirements, (nextStage.structures || []).filter(p => !p.isPlaced(room))];
 }

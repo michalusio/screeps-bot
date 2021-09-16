@@ -20,13 +20,13 @@ export const haulerBody = (energyAvailable: number) => {
   const body: BodyPartConstant[] = [];
   let energy = energyAvailable;
   while (true) {
-    if (energy < 50) break;
+    if (energy < 50 || body.length === 50) break;
     body.push(MOVE);
     energy -= 50;
-    if (energy < 50) break;
+    if (energy < 50 || body.length === 50) break;
     body.push(CARRY);
     energy -= 50;
-    if (energy < 50) break;
+    if (energy < 50 || body.length === 50) break;
     body.push(CARRY);
     energy -= 50;
   }
@@ -62,13 +62,13 @@ export function haulerBehavior(creep: Creep): void {
       const storage = getByIdOrNew(creepMemory.storagePoint, energyContainerNotFull(hauler));
       if (!storage) break;
       if (storage.store.getFreeCapacity(RESOURCE_ENERGY) === 0) {
-        changeState('storing', hauler);
+        changeState('storing', hauler, true);
         break;
       }
       creepMemory.storagePoint = storage.id;
       const transferCode = tryDoOrMove(() => hauler.transfer(storage, RESOURCE_ENERGY), moveTo(hauler, storage, avoidSources));
       if (transferCode === ERR_FULL) {
-        changeState('storing', hauler);
+        changeState('storing', hauler, true);
       }
       else if (hauler.store.getUsedCapacity(RESOURCE_ENERGY) <= 1) {
         changeState('getting', hauler);

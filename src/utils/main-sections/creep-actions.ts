@@ -12,12 +12,13 @@ export function creepActions(): void {
         creep.suicide();
         continue;
       }
+      if (creep.spawning) continue;
       try {
-        let currentState = '';
-        while(creepMemory.state !== currentState) {
-          currentState = creepMemory.state;
+        do {
+          creepMemory.continuous = false;
           roleUtilities[creepMemory.role][2](creep);
         }
+        while (creepMemory.continuous ?? false);
       } catch (e) {
         log(`${e}`);
       }

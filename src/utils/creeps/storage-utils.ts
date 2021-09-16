@@ -12,20 +12,34 @@ const emptyPriority = {
   'storage': 1
 };
 
+const notEmptyContainerCache: { value: [(StructureContainer | StructureStorage)[], (StructureContainer | StructureStorage)[]], time: number } = { value: [[],[]], time: 0 };
+
 export function energyContainerNotEmpty(creep: Creep): () => StructureContainer | StructureStorage | StructureSpawn | undefined {
   return () => {
-    const filtered = _.filter(creep.room.find(FIND_STRUCTURES),
-      isEnergyStorageAnd()
-    ) as (StructureContainer | StructureStorage)[];
-    const withEnergy = _.filter(filtered, s => s.store.getUsedCapacity(RESOURCE_ENERGY) > 200);
+    if (notEmptyContainerCache.time !== Game.time) {
+      notEmptyContainerCache.value[0] = _.filter(creep.room.find(FIND_STRUCTURES), isEnergyStorageAnd()) as (StructureContainer | StructureStorage)[];
+      notEmptyContainerCache.value[1] = _.filter(notEmptyContainerCache.value[0], s => s.store.getUsedCapacity(RESOURCE_ENERGY) > 200);
+      notEmptyContainerCache.time = Game.time;
+    }
+    const filtered = notEmptyContainerCache.value[0];
+    const withEnergy = notEmptyContainerCache.value[1];
       return _.first<StructureContainer | StructureStorage>(_.sortBy(withEnergy, emptyByStructureTypeThenRange(creep))) ?? (filtered.length === 0 ? _.sample(creep.room.find(FIND_MY_SPAWNS, { filter: s => s.store.getUsedCapacity(RESOURCE_ENERGY) > 200 })) : undefined);
   };
 }
 
+const notFullContainerCache: { value: (StructureContainer | StructureStorage | StructureExtension | StructureSpawn)[], time: number } = { value: [], time: 0 };
+
 export function energyContainerNotFull(creep: Creep): () => StructureStorage | StructureContainer | StructureExtension | StructureSpawn | undefined {
-  return () => _.first(_.sortBy(_.filter<StructureContainer | StructureStorage | StructureExtension | StructureSpawn>(creep.room.find(FIND_STRUCTURES),
-    isEnergyContainerAnd(s => s.store.getFreeCapacity(RESOURCE_ENERGY) > 0)
-  ), fillByStructureTypeThenRange(creep)));
+  return () => {
+    if (notFullContainerCache.time !== Game.time) {
+      notFullContainerCache.value = _.filter<StructureContainer | StructureStorage | StructureExtension | StructureSpawn>(
+        creep.room.find(FIND_STRUCTURES),
+        isEnergyContainerAnd(s => s.store.getFreeCapacity(RESOURCE_ENERGY) > 0)
+      );
+      notFullContainerCache.time = Game.time;
+    }
+    return  _.first(_.sortBy(notFullContainerCache.value, fillByStructureTypeThenRange(creep)));
+  };
 }
 
 function fillByStructureTypeThenRange(creep: Creep): (s: StructureContainer | StructureStorage | StructureExtension | StructureSpawn) => number {

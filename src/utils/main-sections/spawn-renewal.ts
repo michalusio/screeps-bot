@@ -8,7 +8,7 @@ export function renewIfNotBusy(): void {
     }
     const nearestCreep = spawn.pos.findInRange(FIND_MY_CREEPS, 1);
     for (const creep of nearestCreep) {
-      if ((creep.ticksToLive ?? 600) < 100) {
+      if ((creep.ticksToLive ?? 600) < 100 && creep.store.getUsedCapacity() === 0) {
         spawn.recycleCreep(creep);
         break;
       }

@@ -20,10 +20,10 @@ export const towerbroBody = (energyAvailable: number) => {
   const body: BodyPartConstant[] = [];
   let energy = energyAvailable;
   while (true) {
-    if (energy < 50) break;
+    if (energy < 50 || body.length === 50) break;
     body.push(MOVE);
     energy -= 50;
-    if (energy < 50) break;
+    if (energy < 50 || body.length === 50) break;
     body.push(CARRY);
     energy -= 50;
   }
@@ -60,7 +60,7 @@ export function towerbroBehavior(creep: Creep): void {
       creepMemory.towerPoint = tower.id;
       const transferCode = tryDoOrMove(() => towerbro.transfer(tower, RESOURCE_ENERGY), moveTo(towerbro, tower));
       if (transferCode === ERR_FULL) {
-        changeState('storing', towerbro);
+        changeState('storing', towerbro, true);
       }
       else if (towerbro.store.getUsedCapacity(RESOURCE_ENERGY) <= 1) {
         changeState('getting', towerbro);

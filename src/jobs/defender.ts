@@ -1,3 +1,5 @@
+import { moveTo, tryDoOrMove } from 'utils/creeps';
+
 import { CreepRoleMemory } from '../utils/creeps/role-memory';
 
 export interface Defender extends Creep {
@@ -17,9 +19,9 @@ export const defenderBody = (energyAvailable: number) => {
   const body: BodyPartConstant[] = [];
   let energy = energyAvailable;
   let times = 0;
-  while (energy >= 180) {
+  while (energy >= 230 && times < 6) {
     times++;
-    energy -= 180;
+    energy -= 230;
   }
   for (let i = 0; i < times; i++) {
     body.push(TOUGH);
@@ -30,7 +32,12 @@ export const defenderBody = (energyAvailable: number) => {
   }
   for (let i = 0; i < times; i++) {
     body.push(MOVE);
+    body.push(MOVE);
     body.push(ATTACK);
+  }
+  while (energy >= 80) {
+    body.push(MOVE);
+    energy -= 80;
   }
   return body;
 };
@@ -56,9 +63,7 @@ export function defenderBehavior(creep: Creep): void {
           if (creepMemory.ticksInPeace >= 10 && creep.hitsMax/2 > creep.hits) {
             creep.suicide();
           }
-          if (!defender.fatigue) {
-            defender.move((Math.floor(Math.random() * 8)+1) as DirectionConstant);
-          }
+          defender.wander();
           break;
         }
         creepMemory.attackTarget = enemy.id;
@@ -79,9 +84,7 @@ export function defenderBehavior(creep: Creep): void {
           creepMemory.attackTarget = undefined;
           break;
         }
-        if (creep.attack(enemy) === ERR_NOT_IN_RANGE) {
-          creep.moveTo(enemy);
-        }
+        tryDoOrMove(() => creep.attack(enemy), moveTo(creep, enemy))
       }
       break;
 
