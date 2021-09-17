@@ -47,10 +47,11 @@ export function builderBehavior(creep: Creep): void {
       if (!source) {
         if (Game.time % 3 === 0) {
           builder.wander();
+          creepMemory.sourcePoint = undefined;
         }
         break;
       }
-      if (source.store.getUsedCapacity(RESOURCE_ENERGY) < 200) {
+      if (source.store.getUsedCapacity(RESOURCE_ENERGY) < 200 && !(source instanceof Ruin)) {
         changeState('sourcing', builder, true);
         break;
       }

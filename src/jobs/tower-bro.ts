@@ -19,7 +19,7 @@ export interface TowerBroMemory extends CreepRoleMemory {
 export const towerbroBody = (energyAvailable: number) => {
   const body: BodyPartConstant[] = [];
   let energy = energyAvailable;
-  while (true) {
+  while (body.length < 20) {
     if (energy < 50 || body.length === 50) break;
     body.push(MOVE);
     energy -= 50;

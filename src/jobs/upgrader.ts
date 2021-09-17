@@ -21,10 +21,13 @@ export const upgraderBody = (energyAvailable: number) => {
   if (energy < 50) return [];
   body.push(MOVE);
   energy -= 50;
-  while (true) {
+  while (body.length < 15) {
     if (energy < 50) break;
     body.push(CARRY);
     energy -= 50;
+    if (energy < 100) break;
+    body.push(WORK);
+    energy -= 100;
     if (energy < 100) break;
     body.push(WORK);
     energy -= 100;

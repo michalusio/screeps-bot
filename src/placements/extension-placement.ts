@@ -13,6 +13,7 @@ const extensionsToRcl = {
 }
 
 export const extensionPlacer: (n: 5 | 10 | 20 | 30 | 40 | 50 | 60) => Placement = (n: 5 | 10 | 20 | 30 | 40 | 50 | 60) => ({
+  name: 'Extensions placer',
   isPlaced: (room: Room) => (room.controller?.level ?? 0) >= extensionsToRcl[n] && (room.find(FIND_MY_STRUCTURES, { filter: s => s.structureType === 'extension'}).length + room.find(FIND_MY_CONSTRUCTION_SITES, { filter: s => s.structureType === 'extension'}).length) >= n,
   place: (room: Room) => {
     const range = _.range(-4, 5);

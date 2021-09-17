@@ -1,3 +1,5 @@
+import { RemoteMinerMemory } from 'jobs/remote-miner';
+
 import { CreepRoleMemory } from '../creeps/role-memory';
 
 export type RoomCreepCounter = {
@@ -11,28 +13,30 @@ export function wrapWithCount(loop: (creepCount: CreepCounter) => void): () => v
     if (!Memory.creepIndex) {
       Memory.creepIndex = 0;
     }
+    Memory.roleCosts = {};
     let creepCount: CreepCounter = new Map();
     // Automatically delete memory of missing creeps
     for (const name in Memory.creeps) {
       const creep = Game.creeps[name];
       if (!creep) {
         delete Memory.creeps[name];
+        continue;
       }
-      else {
-        let roomCount = creepCount.get(creep.room.name);
-        if (!roomCount) {
-          roomCount = { overall: 0, perRole: { } };
-          creepCount.set(creep.room.name, roomCount);
-        }
-        roomCount.overall++;
-        const creepMemory = Memory.creeps[name] as CreepRoleMemory;
-        if (creepMemory.role && (creep.ticksToLive ?? 600) > 100) {
-          roomCount.perRole[creepMemory.role] = (roomCount.perRole[creepMemory.role] ?? 0) + 1;
-        }
-        if (creepMemory.newCreep) {
-          creepMemory.newCreep = false;
-          Memory.creepIndex++;
-        }
+      const creepMemory = Memory.creeps[name] as CreepRoleMemory;
+      const creepRoom = creepMemory.role === 'remoteminer' ? (creepMemory as RemoteMinerMemory).originRoom : creep.room.name;
+      let roomCount = creepCount.get(creepRoom);
+      if (!roomCount) {
+        roomCount = { overall: 0, perRole: { } };
+        creepCount.set(creepRoom, roomCount);
+      }
+      roomCount.overall++;
+
+      if (creepMemory.role && (creep.ticksToLive ?? 600) > 100) {
+        roomCount.perRole[creepMemory.role] = (roomCount.perRole[creepMemory.role] ?? 0) + 1;
+      }
+      if (creepMemory.newCreep) {
+        creepMemory.newCreep = false;
+        Memory.creepIndex++;
       }
     }
 

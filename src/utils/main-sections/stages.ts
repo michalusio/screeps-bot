@@ -1,6 +1,9 @@
 import { roleUtilities } from 'jobs/role-utilities';
 import { extensionPlacer } from 'placements/extension-placement';
 import { Placement } from 'placements/placement';
+import { roadsToController } from 'placements/roads-to-controller';
+import { roadsToSources } from 'placements/roads-to-sources';
+import { spawnPlaza } from 'placements/spawn-plaza';
 
 import { log } from '../log';
 import { CreepCounter, RoomCreepCounter } from './creep-counting';
@@ -12,11 +15,11 @@ type Stage = { roles: RoleRequirements, structures?: Placement[] };
 const stages: Stage[] = [
   { roles: { miner: 1, hauler: 1 } },
   { roles: { miner: 2, hauler: 2, upgrader: 1 } },
-  { roles: { defender: 1 }, structures: [extensionPlacer(5)] },
-  { roles: { upgrader: 2, builder: 1 } },
-  { roles: { miner: 3, builder: 2 }, structures: [extensionPlacer(20)] },
-  { roles: { defender: 2, hauler: 3 } },
-  { roles: { upgrader: 3, towerbro: 1 } },
+  { roles: { defender: 1 } },
+  { roles: { upgrader: 2, builder: 1 }, structures: [extensionPlacer(5)] },
+  { roles: { builder: 2 }, structures: [roadsToSources] },
+  { roles: { defender: 2, hauler: 3 }, structures: [roadsToController, spawnPlaza, extensionPlacer(20)] },
+  { roles: { towerbro: 1, remoteminer: 3 } },
 ]
 
 export function wrapWithStages(loop: (creepCount: CreepCounter) => void): (creepCount: CreepCounter) => void {
@@ -34,8 +37,11 @@ export function wrapWithStages(loop: (creepCount: CreepCounter) => void): (creep
 
       const [nextRequirements, placementsToPlace] = getNextStageDelta(stageIndex, room, roomCounter);
 
-      if (placementsToPlace.length > 0 && room.find(FIND_MY_CONSTRUCTION_SITES).length === 0) {
-        _.first(placementsToPlace).place(room);
+      if (placementsToPlace.length > 0) {
+        if (room.find(FIND_MY_CONSTRUCTION_SITES).length === 0) {
+          log(_.first(placementsToPlace).name);
+          _.first(placementsToPlace).place(room);
+        }
       }
 
       room

@@ -41,7 +41,21 @@ export const haulerMemory: HaulerMemory = {
   state: 'getting'
 };
 
+const resourceCache: { [room: string]: [Resource<'energy'>[], number] } = {};
+
 const avoidSources = (room: Room): RoomPosition[] => room.find(FIND_SOURCES).flatMap(s => s.pos.getAround(1));
+const findNewResource = (hauler: Hauler) => () => {
+  resourceCache[hauler.room.name] = (resourceCache[hauler.room.name] ?? [[], 0])[1] === Game.time
+    ? resourceCache[hauler.room.name]
+    : [hauler.room.find(FIND_DROPPED_RESOURCES, { filter: r => r.resourceType === RESOURCE_ENERGY && r.amount > 10 }), Game.time];
+  return _.find(
+    _.sortBy(
+      resourceCache[hauler.room.name][0],
+      r => -r.pos.getRangeTo(hauler.pos) * 10 - r.amount
+    ),
+    r => r.pos.getFreeSpaceAround() > 0 || r.pos.isNearTo(hauler)
+  );
+};
 
 export function haulerBehavior(creep: Creep): void {
   const hauler = creep as Hauler;
@@ -49,7 +63,7 @@ export function haulerBehavior(creep: Creep): void {
   switch (creepMemory.state) {
 
     case 'getting':
-      const resource = getByIdOrNew(creepMemory.energyPoint, () => _.first(_.sortBy(hauler.room.find(FIND_DROPPED_RESOURCES, { filter: r => r.resourceType === RESOURCE_ENERGY && r.amount > 10 }), r => -r.pos.getRangeTo(hauler.pos) * 5 - r.amount)));
+      const resource = getByIdOrNew(creepMemory.energyPoint, findNewResource(hauler));
       if (!resource) break;
       creepMemory.energyPoint = resource.id;
       tryDoOrMove(() => hauler.pickup(resource), moveTo(hauler, resource, avoidSources));

@@ -4,6 +4,7 @@ declare global {
   interface Memory {
     creepIndex?: number;
     civilizationLevel: { [roomName: string]: number };
+    roleCosts: { [role: string]: number };
   }
 
   interface Creep {
@@ -12,17 +13,33 @@ declare global {
   }
 
   interface RoomPosition {
+    getFreeSpaceAround(): number;
     getAround(range: number): RoomPosition[];
     getDirected(dir: DirectionConstant): RoomPosition;
     isBorderCell(): boolean;
     isEmpty(): boolean;
+    hasRoad(): boolean;
   }
 }
 
 export function injectMethods(): void {
+
+  RoomPosition.prototype.getFreeSpaceAround = function(): number {
+    if (!Game.rooms[this.roomName]) {
+      return 999;
+    }
+    var fields = Game.rooms[this.roomName].lookForAtArea(LOOK_TERRAIN, this.y - 1, this.x - 1, this.y + 1, this.x + 1, true);
+    var creeps = Game.rooms[this.roomName].lookForAtArea(LOOK_CREEPS, this.y - 1, this.x - 1, this.y + 1, this.x + 1, true);
+    return 9 - _.countBy(fields , f => f.terrain).wall - creeps.length;
+  };
+
   RoomPosition.prototype.isEmpty = function(): boolean {
-    return this.look().every(l => l.type === 'terrain');
+    return this.look().every(l => (l.type === 'terrain' && l.terrain !== 'wall') || l.type === 'tombstone' || l.type === 'ruin' || l.type === 'flag' || l.type === 'creep');
   }
+
+  RoomPosition.prototype.hasRoad = function(): boolean {
+    return this.look().some(l => (l.type === 'structure' && l.structure?.structureType === 'road') || (l.type === 'constructionSite' && l.constructionSite?.structureType === 'road'));
+  };
 
   RoomPosition.prototype.getAround = function(range: number): RoomPosition[] {
     const positions: RoomPosition[] = [];

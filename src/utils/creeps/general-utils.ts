@@ -1,5 +1,5 @@
 export function getByIdOrNew<T>(id: Id<T> | undefined, getNew: () => T | undefined): T | undefined {
-  return (id ? Game.getObjectById(id) : undefined) || getNew();
+  return (id ? Game.getObjectById(id) : undefined) ?? getNew();
 }
 
 const structuresToRepairCache: { [roomName: string]: [AnyStructure[], number] } = {};
@@ -12,10 +12,4 @@ export function structuresToRepair(room: Room): AnyStructure[] {
     ];
   }
   return structuresToRepairCache[room.name][0];
-}
-
-export function freeSpaceAround(pos: RoomPosition, room: Room): number {
-  var fields = room.lookForAtArea(LOOK_TERRAIN, pos.y-1, pos.x-1, pos.y+1, pos.x+1, true);
-  var creeps = room.lookForAtArea(LOOK_CREEPS, pos.y-1, pos.x-1, pos.y+1, pos.x+1, true);
-  return 9-_.countBy(fields , f => f.terrain).wall - creeps.length;
 }

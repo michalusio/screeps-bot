@@ -13,6 +13,10 @@ export function creepActions(): void {
         continue;
       }
       if (creep.spawning) continue;
+      if (!Memory.roleCosts[creepMemory.role]) {
+        Memory.roleCosts[creepMemory.role] = 0;
+      }
+      const currentCpu = Game.cpu.getUsed();
       try {
         do {
           creepMemory.continuous = false;
@@ -22,6 +26,7 @@ export function creepActions(): void {
       } catch (e) {
         log(`${e}`);
       }
+      Memory.roleCosts[creepMemory.role] += Game.cpu.getUsed() - currentCpu;
     }
     else log(`Creep ${creepName} has no role or no behavior defined`);
   }

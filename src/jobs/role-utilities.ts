@@ -4,6 +4,7 @@ import { builderBehavior, builderBody, builderMemory } from './builder';
 import { defenderBehavior, defenderBody, defenderMemory } from './defender';
 import { haulerBehavior, haulerBody, haulerMemory } from './hauler';
 import { minerBehavior, minerBody, minerMemory } from './miner';
+import { remoteMinerBehavior, remoteMinerBody, remoteMinerMemory } from './remote-miner';
 import { towerbroBehavior, towerbroBody, towerbroMemory } from './tower-bro';
 import { upgraderBehavior, upgraderBody, upgraderMemory } from './upgrader';
 
@@ -23,5 +24,6 @@ export const roleUtilities: Roles = {
   builder: [builderBody, builderMemory, builderBehavior],
   defender: [defenderBody, defenderMemory, defenderBehavior],
   hauler: [haulerBody, haulerMemory, haulerBehavior],
-  towerbro: [towerbroBody, towerbroMemory, towerbroBehavior]
+  towerbro: [towerbroBody, towerbroMemory, towerbroBehavior],
+  remoteminer: [remoteMinerBody, remoteMinerMemory, remoteMinerBehavior]
 }

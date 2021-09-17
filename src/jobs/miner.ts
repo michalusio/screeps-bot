@@ -1,4 +1,4 @@
-import { freeSpaceAround, getByIdOrNew, moveTo, tryDoOrMove } from 'utils/creeps';
+import { getByIdOrNew, moveTo, tryDoOrMove } from 'utils/creeps';
 
 import { CreepRoleMemory } from '../utils/creeps/role-memory';
 
@@ -17,23 +17,23 @@ export interface MinerMemory extends CreepRoleMemory {
 export const minerBody = (energyAvailable: number) => {
   const body: BodyPartConstant[] = [];
   let energy = energyAvailable;
-  while (true) {
-    if (energy < 50 || body.length === 50) break;
+  while (body.length < 12) {
+    if (energy < 50) break;
     body.push(MOVE);
     energy -= 50;
-    if (energy < 100 || body.length === 50) break;
+    if (energy < 100) break;
     body.push(WORK);
     energy -= 100;
-    if (energy < 100 || body.length === 50) break;
+    if (energy < 100) break;
     body.push(WORK);
     energy -= 100;
-    if (energy < 100 || body.length === 50) break;
+    if (energy < 100) break;
     body.push(WORK);
     energy -= 100;
-    if (energy < 100 || body.length === 50) break;
+    if (energy < 100) break;
     body.push(WORK);
     energy -= 100;
-    if (energy < 100 || body.length === 50) break;
+    if (energy < 100) break;
     body.push(WORK);
     energy -= 100;
   }
@@ -59,9 +59,9 @@ export function minerBehavior(creep: Creep): void {
         creepMemory.sourcePoint = undefined;
         moveTo(miner, newSource)();
       } else {
-        if (source.pos.getRangeTo(miner.pos) > 1.8 && freeSpaceAround(source.pos, source.room) === 0) {
+        if (source.pos.getRangeTo(miner.pos) > 1.8 && source.pos.getFreeSpaceAround() === 0) {
           creepMemory.sourcePoint = undefined;
-          creepMemory.continuous = true;
+          creepMemory.continuous = false;
           break;
         }
         creepMemory.sourcePoint = source.id;
