@@ -23,6 +23,7 @@ export const defenderBody = (energyAvailable: number) => {
     times++;
     energy -= 230;
   }
+  if (times === 0) return [];
   for (let i = 0; i < times; i++) {
     body.push(TOUGH);
     body.push(TOUGH);

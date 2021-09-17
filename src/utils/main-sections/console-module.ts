@@ -22,7 +22,7 @@ export function logging(creepCount: CreepCounter): void {
 
   let totalCreeps = 0;
   creepCount.forEach(c => totalCreeps += c.overall);
-  const sumCpu = roles.map(r => Memory.roleCosts[r] || 0).reduce((a, b) => a + b);
+  const sumCpu = roles.map(r => Memory.roleCosts[r] || 0).reduce((a, b) => a + b, 0.0001);
   console.log(`Total role Cpu: ${Math.floor(sumCpu*10)/10} (+~${Math.floor(totalCreeps*2)/10})\n`+roles.map(r => `${r}: ${Math.floor((Memory.roleCosts[r] || 0)*100 / sumCpu)}%`).join('\n'));
 }
 

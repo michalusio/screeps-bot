@@ -61,7 +61,6 @@ export function minerBehavior(creep: Creep): void {
       } else {
         if (source.pos.getRangeTo(miner.pos) > 1.8 && source.pos.getFreeSpaceAround() === 0) {
           creepMemory.sourcePoint = undefined;
-          creepMemory.continuous = false;
           break;
         }
         creepMemory.sourcePoint = source.id;

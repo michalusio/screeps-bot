@@ -60,7 +60,7 @@ export function towerbroBehavior(creep: Creep): void {
       creepMemory.towerPoint = tower.id;
       const transferCode = tryDoOrMove(() => towerbro.transfer(tower, RESOURCE_ENERGY), moveTo(towerbro, tower));
       if (transferCode === ERR_FULL) {
-        changeState('storing', towerbro, true);
+        changeState('storing', towerbro);
       }
       else if (towerbro.store.getUsedCapacity(RESOURCE_ENERGY) <= 1) {
         changeState('getting', towerbro);

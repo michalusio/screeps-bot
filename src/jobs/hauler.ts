@@ -76,13 +76,13 @@ export function haulerBehavior(creep: Creep): void {
       const storage = getByIdOrNew(creepMemory.storagePoint, energyContainerNotFull(hauler));
       if (!storage) break;
       if (storage.store.getFreeCapacity(RESOURCE_ENERGY) === 0) {
-        changeState('storing', hauler, true);
+        changeState('storing', hauler);
         break;
       }
       creepMemory.storagePoint = storage.id;
       const transferCode = tryDoOrMove(() => hauler.transfer(storage, RESOURCE_ENERGY), moveTo(hauler, storage, avoidSources));
       if (transferCode === ERR_FULL) {
-        changeState('storing', hauler, true);
+        changeState('storing', hauler);
       }
       else if (hauler.store.getUsedCapacity(RESOURCE_ENERGY) <= 1) {
         changeState('getting', hauler);

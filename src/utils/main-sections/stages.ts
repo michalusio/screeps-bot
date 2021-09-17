@@ -1,3 +1,4 @@
+import { defenderBody, defenderMemory } from 'jobs/defender';
 import { roleUtilities } from 'jobs/role-utilities';
 import { extensionPlacer } from 'placements/extension-placement';
 import { Placement } from 'placements/placement';
@@ -27,6 +28,16 @@ export function wrapWithStages(loop: (creepCount: CreepCounter) => void): (creep
     if (!Memory.civilizationLevel) {
       Memory.civilizationLevel = {};
     }
+
+    if (creepCount.size === 0) {
+      Object.keys(Game.spawns).forEach(s => {
+        const spawn = Game.spawns[s]
+        if (spawn.room.energyAvailable > 230 && !spawn.spawning && spawn.spawnCreep(defenderBody(spawn.room.energyAvailable), `defender-${Memory.creepIndex}`, { memory: { ...defenderMemory, newCreep: true } }) === OK) {
+          Memory.creepIndex = (Memory.creepIndex ?? 0) + 1;
+        }
+      });
+    }
+
     creepCount.forEach((roomCounter, roomName) => {
       const room = Game.rooms[roomName];
 
@@ -55,7 +66,7 @@ export function wrapWithStages(loop: (creepCount: CreepCounter) => void): (creep
 }
 
 export function civilizationEnergyLevel(roomName: string): number {
-  return 150 + Math.floor((Memory.civilizationLevel[roomName] ?? 0) * 50);
+  return Math.max(150, 150 + Math.floor((Memory.civilizationLevel[roomName] ?? 0) * 50));
 }
 
 function spawnRequirement(spawn: StructureSpawn, requirements: RoleRequirements): void {
@@ -75,12 +86,13 @@ function spawnRequirement(spawn: StructureSpawn, requirements: RoleRequirements)
   body.length = Math.min(body.length, 50);
 
   const memory = roleUtilities[requiredRole][1];
-
-  const spawnCode = spawn.spawnCreep(body, `${requiredRole}-${Memory.creepIndex}`, { memory: { ...memory, newCreep: true } });
-  if (spawnCode === OK) {
-    requirements[requiredRole]--;
+  if (body.length) {
+    const spawnCode = spawn.spawnCreep(body, `${requiredRole}-${Memory.creepIndex}`, { memory: { ...memory, newCreep: true } });
+    if (spawnCode === OK) {
+      requirements[requiredRole]--;
+    }
+    else log(`Encountered a problem with spawning a ${requiredRole}: ${spawnCode}`);
   }
-  else log(`Encountered a problem with spawning a ${requiredRole}: ${spawnCode}`);
 }
 
 function getCurrentStageIndex(room: Room, creepCount: RoomCreepCounter): number {
@@ -91,10 +103,8 @@ function getCurrentStageIndex(room: Room, creepCount: RoomCreepCounter): number 
         return stageIndex;
       }
     }
-    let index = 0;
     for (const placement of (stage.structures || [])) {
-      if (Game.time % 10 === index && !placement.isPlaced(room)) return stageIndex;
-      index = (index + 1) % 10;
+      if (!placement.isPlaced(room)) return stageIndex;
     }
     stageIndex++;
   }

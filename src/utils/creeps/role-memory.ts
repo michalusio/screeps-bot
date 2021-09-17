@@ -6,11 +6,10 @@ export interface CreepRoleMemory extends CreepMemory {
   role: string;
   newCreep: boolean;
   state: string;
-  continuous?: boolean;
 }
 
-export function stateChanger<T extends CreepRoleMemory & { state: string; }>(...clears: OptionalKeys<T>[]): (state: T['state'], creep: Creep & { memory: T }, continuous?: boolean) => void {
-  return (state, creep, continuous) => {
+export function stateChanger<T extends CreepRoleMemory & { state: string; }>(...clears: OptionalKeys<T>[]): (state: T['state'], creep: Creep & { memory: T }) => void {
+  return (state, creep) => {
     const memory = creep.memory;
     clears.forEach(clear => (memory as any)[clear] = undefined);
     if (memory.state !== state) {
@@ -18,6 +17,5 @@ export function stateChanger<T extends CreepRoleMemory & { state: string; }>(...
         .text(state, creep.pos.x, creep.pos.y - 1, { align: 'center', backgroundColor: 'gray', backgroundPadding: 0.15 });
     }
     memory.state = state;
-    memory.continuous = !!continuous;
   }
 }

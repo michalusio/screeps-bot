@@ -52,14 +52,14 @@ export function builderBehavior(creep: Creep): void {
         break;
       }
       if (source.store.getUsedCapacity(RESOURCE_ENERGY) < 200 && !(source instanceof Ruin)) {
-        changeState('sourcing', builder, true);
+        changeState('sourcing', builder);
         break;
       }
       creepMemory.sourcePoint = source.id;
       tryDoOrMove(() => builder.withdraw(source, RESOURCE_ENERGY), moveTo(builder, source));
       if (builder.store.getUsedCapacity(RESOURCE_ENERGY) >= builder.store.getCapacity()) {
         if (creepMemory.repairPoint || structuresToRepair(builder.room).length > 0) {
-          changeState('repairing', builder);
+          changeState('building', builder);
         }
         else {
           changeState('building', builder);
@@ -71,7 +71,7 @@ export function builderBehavior(creep: Creep): void {
       {
         const site = getByIdOrNew(creepMemory.buildPoint, () => _.min(builder.room.find(FIND_CONSTRUCTION_SITES), s => (s.progressTotal - s.progress) + s.pos.getRangeTo(builder) * 100));
         if (!site) {
-          changeState('sourcing', builder, true);
+          changeState('sourcing', builder);
           break;
         };
         creepMemory.buildPoint = site.id;
@@ -87,7 +87,7 @@ export function builderBehavior(creep: Creep): void {
       {
         const site = getByIdOrNew(creepMemory.repairPoint, () => _.sample(structuresToRepair(builder.room)));
         if (!site || site.hits >= site.hitsMax) {
-          changeState('sourcing', builder, true);
+          changeState('sourcing', builder);
           break;
         }
         creepMemory.repairPoint = site.id;

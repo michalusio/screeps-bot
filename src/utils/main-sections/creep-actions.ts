@@ -18,11 +18,7 @@ export function creepActions(): void {
       }
       const currentCpu = Game.cpu.getUsed();
       try {
-        do {
-          creepMemory.continuous = false;
-          roleUtilities[creepMemory.role][2](creep);
-        }
-        while (creepMemory.continuous ?? false);
+        roleUtilities[creepMemory.role][2](creep);
       } catch (e) {
         log(`${e}`);
       }

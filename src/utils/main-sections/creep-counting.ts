@@ -23,6 +23,9 @@ export function wrapWithCount(loop: (creepCount: CreepCounter) => void): () => v
         continue;
       }
       const creepMemory = Memory.creeps[name] as CreepRoleMemory;
+      if (creepMemory.role === 'remoteminer' && (creepMemory as RemoteMinerMemory).originRoom.length === 0) {
+        (creepMemory as RemoteMinerMemory).originRoom = creep.room.name;
+      }
       const creepRoom = creepMemory.role === 'remoteminer' ? (creepMemory as RemoteMinerMemory).originRoom : creep.room.name;
       let roomCount = creepCount.get(creepRoom);
       if (!roomCount) {

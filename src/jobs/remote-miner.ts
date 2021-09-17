@@ -45,15 +45,11 @@ export const remoteMinerMemory: RemoteMinerMemory = {
 export function remoteMinerBehavior(creep: Creep): void {
   const remoteMiner = creep as RemoteMiner;
   const creepMemory = remoteMiner.memory;
-  if (creepMemory.originRoom === '') {
-    creepMemory.originRoom = remoteMiner.room.name;
-    creepMemory.sourceRoom = 'W4N8';
-  }
   switch (creepMemory.state) {
 
     case 'mining':
       if (remoteMiner.store.getFreeCapacity() === 0) {
-        changeState('hauling', remoteMiner, true);
+        changeState('hauling', remoteMiner);
       }
       if (creepMemory.sourceRoom === undefined) {
         log(`Remote miner ${creep.name} missing source room`);
@@ -64,8 +60,8 @@ export function remoteMinerBehavior(creep: Creep): void {
         if (!source) {
           const newSource = _.first(_.sortBy(remoteMiner.room.find(FIND_SOURCES), s => s.ticksToRegeneration));
           moveTo(remoteMiner, newSource)();
-        } else if (tryDoOrMove(() => remoteMiner.harvest(source), moveTo(remoteMiner, source)) !== OK) {
-          changeState('hauling', remoteMiner, true);
+        } else if (tryDoOrMove(() => remoteMiner.harvest(source), moveTo(remoteMiner, source)) === ERR_NOT_ENOUGH_RESOURCES) {
+          changeState('hauling', remoteMiner);
         }
       } else {
         const exit = creep.room.findExitTo(creepMemory.sourceRoom);
@@ -85,13 +81,13 @@ export function remoteMinerBehavior(creep: Creep): void {
         const storage = getByIdOrNew(creepMemory.storagePoint, energyContainerNotFull(remoteMiner));
         if (!storage) break;
         if (storage.store.getFreeCapacity(RESOURCE_ENERGY) === 0) {
-          changeState('hauling', remoteMiner, true);
+          changeState('hauling', remoteMiner);
           break;
         }
         creepMemory.storagePoint = storage.id;
         const transferCode = tryDoOrMove(() => remoteMiner.transfer(storage, RESOURCE_ENERGY), moveTo(remoteMiner, storage));
         if (transferCode === ERR_FULL) {
-          changeState('hauling', remoteMiner, true);
+          changeState('hauling', remoteMiner);
         }
         else if (remoteMiner.store.getUsedCapacity(RESOURCE_ENERGY) <= 1) {
           changeState('mining', remoteMiner);
