@@ -25,7 +25,7 @@ const stages: Stage[] = [
   { roles: { builder: 2, remoteminer: 3 }, structures: [roadsToSources, roadsBetweenSources] },
   { roles: { defender: 2, builder: 3, hauler: 3 }, structures: [roadsToController, spawnPlaza, extensionPlacer(10)] },
   { roles: { towerbro: 1, remoteminer: 5 }, structures: [placeContainers, placeTower] },
-  { roles: { remoteminer: 7 }, structures: [roadsToExits, extensionPlacer(20)] },
+  { roles: { remoteminer: 8 }, structures: [roadsToExits, extensionPlacer(20)] },
 ]
 
 export function wrapWithStages(loop: (creepCount: CreepCounter) => void): (creepCount: CreepCounter) => void {

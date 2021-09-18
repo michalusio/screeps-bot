@@ -52,46 +52,48 @@ export function injectMethods(): void {
 
   Room.prototype.getRoomNameOnSide = function(side: ExitConstant): string {
     const parts = this.name.split('');
+    const we = parts[0] + parts[1];
+    const ns = parts[2] + parts[3];
     switch(side) {
       case 1:
         if (parts[2] === 'S') {
           if (parts[3] === '0') {
-            return parts[0] + parts[1] + 'N0';
+            return we + 'N0';
           } else {
-            return parts[0] + parts[1] + 'S' + (parseInt(parts[3]) - 1);
+            return we + 'S' + (parseInt(parts[3]) - 1);
           }
         } else {
-          return parts[0] + parts[1] + 'N' + (parseInt(parts[3]) + 1);
+          return we + 'N' + (parseInt(parts[3]) + 1);
         }
       case 3:
-        if (parts[2] === 'W') {
-          if (parts[3] === '0') {
-            return 'E0' + parts[2] + parts[3];
+        if (parts[0] === 'W') {
+          if (parts[1] === '0') {
+            return 'E0' + ns;
           } else {
-            return 'W' + (parseInt(parts[1]) - 1) + parts[2] + parts[3];
+            return 'W' + (parseInt(parts[1]) - 1) + ns;
           }
         } else {
-          return 'E' + (parseInt(parts[3]) + 1) + parts[2] + parts[3];
+          return 'E' + (parseInt(parts[1]) + 1) + ns;
         }
       case 5:
         if (parts[2] === 'N') {
           if (parts[3] === '0') {
-            return parts[0] + parts[1] + 'S0';
+            return we + 'S0';
           } else {
-            return parts[0] + parts[1] + 'N' + (parseInt(parts[3]) - 1);
+            return we + 'N' + (parseInt(parts[3]) - 1);
           }
         } else {
-          return parts[0] + parts[1] + 'S' + (parseInt(parts[3]) + 1);
+          return we + 'S' + (parseInt(parts[3]) + 1);
         }
       case 7:
-        if (parts[2] === 'E') {
-          if (parts[3] === '0') {
-            return 'W0' + parts[2] + parts[3];
+        if (parts[0] === 'E') {
+          if (parts[1] === '0') {
+            return 'W0' + ns;
           } else {
-            return 'E' + (parseInt(parts[1]) - 1) + parts[2] + parts[3];
+            return 'E' + (parseInt(parts[1]) - 1) + ns;
           }
         } else {
-          return 'W' + (parseInt(parts[3]) + 1) + parts[2] + parts[3];
+          return 'W' + (parseInt(parts[1]) + 1) + ns;
         }
     }
   };
