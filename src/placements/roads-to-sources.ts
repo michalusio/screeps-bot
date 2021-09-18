@@ -6,7 +6,7 @@ export const roadsToSources: Placement = {
     const spawns = room.find(FIND_MY_SPAWNS);
     return room.find(FIND_SOURCES).every(source => {
       return spawns.every(spawn => {
-        return spawn.pos.findPathTo(source, { ignoreCreeps: true })
+        return spawn.pos.findPathTo(source, { ignoreCreeps: true, ignoreRoads: true })
           .every(step => {
             const pos = new RoomPosition(step.x, step.y, room.name);
             return pos.hasRoad() || pos.isEqualTo(spawn) || pos.isEqualTo(source);
@@ -18,7 +18,7 @@ export const roadsToSources: Placement = {
     const spawns = room.find(FIND_MY_SPAWNS);
     room.find(FIND_SOURCES).forEach(source => {
       spawns.forEach(spawn => {
-        spawn.pos.findPathTo(source, { ignoreCreeps: true })
+        spawn.pos.findPathTo(source, { ignoreCreeps: true, ignoreRoads: true })
           .forEach(step => {
             const pos = new RoomPosition(step.x, step.y, room.name);
             if (pos.isEmpty()) {

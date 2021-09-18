@@ -43,6 +43,7 @@ export function builderBehavior(creep: Creep): void {
   switch (creepMemory.state) {
 
     case 'sourcing':
+      changeStateIfFull(builder, creepMemory);
       const source = getByIdOrNew<StructureStorage | StructureContainer | StructureSpawn | Ruin>(creepMemory.sourcePoint, () => _.sample(builder.room.find(FIND_RUINS, {filter: r => r.store.getUsedCapacity(RESOURCE_ENERGY) > 0})) ?? energyContainerNotEmpty(builder)());
       if (!source) {
         if (Game.time % 3 === 0) {
@@ -57,14 +58,7 @@ export function builderBehavior(creep: Creep): void {
       }
       creepMemory.sourcePoint = source.id;
       tryDoOrMove(() => builder.withdraw(source, RESOURCE_ENERGY), moveTo(builder, source));
-      if (builder.store.getUsedCapacity(RESOURCE_ENERGY) >= builder.store.getCapacity()) {
-        if (creepMemory.repairPoint || structuresToRepair(builder.room).length > 0) {
-          changeState('building', builder);
-        }
-        else {
-          changeState('building', builder);
-        }
-      }
+      changeStateIfFull(builder, creepMemory);
       break;
 
     case 'building':
@@ -101,3 +95,15 @@ export function builderBehavior(creep: Creep): void {
 }
 
 const changeState = stateChanger<BuilderMemory>('buildPoint', 'repairPoint', 'sourcePoint');
+
+function changeStateIfFull(builder: Builder, creepMemory: BuilderMemory) {
+  if (builder.store.getUsedCapacity(RESOURCE_ENERGY) >= builder.store.getCapacity()) {
+    if (creepMemory.repairPoint || structuresToRepair(builder.room).length > 0) {
+      changeState('repairing', builder);
+    }
+    else {
+      changeState('building', builder);
+    }
+  }
+}
+

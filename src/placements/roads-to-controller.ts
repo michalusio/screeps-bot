@@ -7,7 +7,7 @@ export const roadsToController: Placement = {
     const controller = room.controller;
     const spawns = room.find(FIND_MY_SPAWNS);
     return spawns.every(spawn => {
-      return spawn.pos.findPathTo(controller, { ignoreCreeps: true })
+      return spawn.pos.findPathTo(controller, { ignoreCreeps: true, ignoreRoads: true })
       .every(step => {
         const pos = new RoomPosition(step.x, step.y, room.name);
         return pos.hasRoad() || pos.isEqualTo(spawn) || pos.isEqualTo(controller);
@@ -19,7 +19,7 @@ export const roadsToController: Placement = {
     const controller = room.controller;
     const spawns = room.find(FIND_MY_SPAWNS);
     spawns.forEach(spawn => {
-      spawn.pos.findPathTo(controller, { ignoreCreeps: true })
+      spawn.pos.findPathTo(controller, { ignoreCreeps: true, ignoreRoads: true })
         .forEach(step => {
           const pos = new RoomPosition(step.x, step.y, room.name);
           if (pos.isEmpty()) {

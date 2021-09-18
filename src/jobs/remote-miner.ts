@@ -45,6 +45,15 @@ export const remoteMinerMemory: RemoteMinerMemory = {
 export function remoteMinerBehavior(creep: Creep): void {
   const remoteMiner = creep as RemoteMiner;
   const creepMemory = remoteMiner.memory;
+  if (creepMemory.sourceRoom === undefined) {
+    creepMemory.sourceRoom = _.min([
+      remoteMiner.room.getRoomNameOnSide(FIND_EXIT_TOP),
+      remoteMiner.room.getRoomNameOnSide(FIND_EXIT_BOTTOM),
+      remoteMiner.room.getRoomNameOnSide(FIND_EXIT_LEFT),
+      remoteMiner.room.getRoomNameOnSide(FIND_EXIT_RIGHT)
+    ], r => Object.keys(Game.creeps).map(c => Game.creeps[c]).filter(c => c.roleMemory.role === 'remoteminer' && (c.roleMemory as RemoteMinerMemory).sourceRoom === r).length);
+    log(`Remote miner ${remoteMiner.name} chose source room: ${creepMemory.sourceRoom}`);
+  }
   switch (creepMemory.state) {
 
     case 'mining':
@@ -56,9 +65,9 @@ export function remoteMinerBehavior(creep: Creep): void {
         break;
       }
       if (creep.room.name === creepMemory.sourceRoom) {
-        const source = _.first(remoteMiner.room.find(FIND_SOURCES_ACTIVE));
+        const source = _.min(remoteMiner.room.find(FIND_SOURCES_ACTIVE), s => s.pos.getRangeTo(remoteMiner));
         if (!source) {
-          const newSource = _.first(_.sortBy(remoteMiner.room.find(FIND_SOURCES), s => s.ticksToRegeneration));
+          const newSource = _.min(remoteMiner.room.find(FIND_SOURCES), s => s.ticksToRegeneration);
           moveTo(remoteMiner, newSource)();
         } else if (tryDoOrMove(() => remoteMiner.harvest(source), moveTo(remoteMiner, source)) === ERR_NOT_ENOUGH_RESOURCES) {
           changeState('hauling', remoteMiner);

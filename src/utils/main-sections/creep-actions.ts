@@ -1,11 +1,10 @@
 import { roleUtilities } from 'jobs/role-utilities';
-import { CreepRoleMemory } from 'utils/creeps';
 import { log } from 'utils/log';
 
 export function creepActions(): void {
   for (const creepName in Game.creeps) {
     const creep = Game.creeps[creepName];
-    const creepMemory = creep.memory as CreepRoleMemory;
+    const creepMemory = creep.roleMemory;
     if (creepMemory.role && roleUtilities[creepMemory.role]) {
       if (creep.hitsMax/2 > creep.hits && creepMemory.role !== 'defender') {
         creep.say("Bye Bye!");
@@ -20,7 +19,10 @@ export function creepActions(): void {
       try {
         roleUtilities[creepMemory.role][2](creep);
       } catch (e) {
-        log(`${e}`);
+        if (e instanceof Error) {
+          console.log(e.stack);
+        }
+        else console.log(e);
       }
       Memory.roleCosts[creepMemory.role] += Game.cpu.getUsed() - currentCpu;
     }

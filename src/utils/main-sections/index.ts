@@ -1,4 +1,4 @@
-export * from './console-module';
+export * from './dashboard-module';
 export * from './creep-counting';
 export * from './flag-building';
 export * from './spawn-renewal';

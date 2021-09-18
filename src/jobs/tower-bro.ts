@@ -55,7 +55,7 @@ export function towerbroBehavior(creep: Creep): void {
 
     case 'storing':
       const towers = towerbro.room.find<FIND_MY_STRUCTURES, StructureTower>(FIND_MY_STRUCTURES, { filter: (s: AnyStructure) => s.structureType === STRUCTURE_TOWER && s.store.getFreeCapacity(RESOURCE_ENERGY) > 0 });
-      const tower = getByIdOrNew(creepMemory.towerPoint, () => _.first(_.sortBy(towers, t => t.store.getUsedCapacity(RESOURCE_ENERGY))));
+      const tower = getByIdOrNew(creepMemory.towerPoint, () => _.min(towers, t => t.store.getUsedCapacity(RESOURCE_ENERGY)));
       if (!tower) break;
       creepMemory.towerPoint = tower.id;
       const transferCode = tryDoOrMove(() => towerbro.transfer(tower, RESOURCE_ENERGY), moveTo(towerbro, tower));

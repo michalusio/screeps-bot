@@ -1,7 +1,5 @@
 import { RemoteMinerMemory } from 'jobs/remote-miner';
 
-import { CreepRoleMemory } from '../creeps/role-memory';
-
 export type RoomCreepCounter = {
   overall: number;
   perRole: { [key: string]: number | undefined; }
@@ -14,6 +12,7 @@ export function wrapWithCount(loop: (creepCount: CreepCounter) => void): () => v
       Memory.creepIndex = 0;
     }
     Memory.roleCosts = {};
+    Memory.wallRepairs = Memory.wallRepairs || {};
     let creepCount: CreepCounter = new Map();
     // Automatically delete memory of missing creeps
     for (const name in Memory.creeps) {
@@ -22,7 +21,7 @@ export function wrapWithCount(loop: (creepCount: CreepCounter) => void): () => v
         delete Memory.creeps[name];
         continue;
       }
-      const creepMemory = Memory.creeps[name] as CreepRoleMemory;
+      const creepMemory = creep.roleMemory;
       if (creepMemory.role === 'remoteminer' && (creepMemory as RemoteMinerMemory).originRoom.length === 0) {
         (creepMemory as RemoteMinerMemory).originRoom = creep.room.name;
       }

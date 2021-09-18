@@ -1,10 +1,15 @@
+import { RemoteMinerMemory } from 'jobs/remote-miner';
+
 import { CreepRoleMemory } from './creeps/role-memory';
+import { log } from './log';
 
 declare global {
   interface Memory {
     creepIndex?: number;
     civilizationLevel: { [roomName: string]: number };
     roleCosts: { [role: string]: number };
+    orders: { [roomName: string]: { [role: string]: number } };
+    wallRepairs: { [roomName: string]: boolean };
   }
 
   interface Creep {
@@ -20,9 +25,76 @@ declare global {
     isEmpty(): boolean;
     hasRoad(): boolean;
   }
+
+  interface Room {
+    getRoomNameOnSide(side: ExitConstant): string;
+  }
+
+  function assignRemotes(howMany: number, roomName: string): void;
+  function order(roomName: string, role: string, howMany: number): void;
 }
 
 export function injectMethods(): void {
+
+  global.assignRemotes = function(howMany: number, roomName: string): void {
+    const remoteMinerCreeps = Object.keys(Game.creeps).map(id => Game.creeps[id]).filter(c => c.roleMemory.role === 'remoteminer' && !(c.roleMemory as RemoteMinerMemory).sourceRoom);
+    if (remoteMinerCreeps.length < howMany) {
+      log(`Cannot assign ${howMany} remote miners - only ${remoteMinerCreeps.length} are left unassigned.`);
+    } else {
+      _.take(remoteMinerCreeps, howMany).forEach(c => (c.roleMemory as RemoteMinerMemory).sourceRoom = roomName);
+    }
+  };
+
+  global.order = function(roomName: string, role: string, howMany: number): void {
+    Memory.orders[roomName] = (Memory.orders[roomName] || {});
+    Memory.orders[roomName][role] = (Memory.orders[roomName][role] || 0) + howMany;
+  };
+
+  Room.prototype.getRoomNameOnSide = function(side: ExitConstant): string {
+    const parts = this.name.split('');
+    switch(side) {
+      case 1:
+        if (parts[2] === 'S') {
+          if (parts[3] === '0') {
+            return parts[0] + parts[1] + 'N0';
+          } else {
+            return parts[0] + parts[1] + 'S' + (parseInt(parts[3]) - 1);
+          }
+        } else {
+          return parts[0] + parts[1] + 'N' + (parseInt(parts[3]) + 1);
+        }
+      case 3:
+        if (parts[2] === 'W') {
+          if (parts[3] === '0') {
+            return 'E0' + parts[2] + parts[3];
+          } else {
+            return 'W' + (parseInt(parts[1]) - 1) + parts[2] + parts[3];
+          }
+        } else {
+          return 'E' + (parseInt(parts[3]) + 1) + parts[2] + parts[3];
+        }
+      case 5:
+        if (parts[2] === 'N') {
+          if (parts[3] === '0') {
+            return parts[0] + parts[1] + 'S0';
+          } else {
+            return parts[0] + parts[1] + 'N' + (parseInt(parts[3]) - 1);
+          }
+        } else {
+          return parts[0] + parts[1] + 'S' + (parseInt(parts[3]) + 1);
+        }
+      case 7:
+        if (parts[2] === 'E') {
+          if (parts[3] === '0') {
+            return 'W0' + parts[2] + parts[3];
+          } else {
+            return 'E' + (parseInt(parts[1]) - 1) + parts[2] + parts[3];
+          }
+        } else {
+          return 'W' + (parseInt(parts[3]) + 1) + parts[2] + parts[3];
+        }
+    }
+  };
 
   RoomPosition.prototype.getFreeSpaceAround = function(): number {
     if (!Game.rooms[this.roomName]) {

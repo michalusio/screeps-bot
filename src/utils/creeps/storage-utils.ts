@@ -38,7 +38,7 @@ export function energyContainerNotFull(creep: Creep): () => StructureStorage | S
       );
       notFullContainerCache.time = Game.time;
     }
-    return  _.first(_.sortBy(notFullContainerCache.value, fillByStructureTypeThenRange(creep)));
+    return  _.min(notFullContainerCache.value, fillByStructureTypeThenRange(creep));
   };
 }
 

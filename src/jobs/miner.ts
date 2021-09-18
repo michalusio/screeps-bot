@@ -55,7 +55,7 @@ export function minerBehavior(creep: Creep): void {
     case 'mining':
       const source = getByIdOrNew(creepMemory.sourcePoint, () => _.sample(miner.room.find(FIND_SOURCES_ACTIVE)));
       if (!source || source.energy === 0) {
-        const newSource = _.first(_.sortBy(miner.room.find(FIND_SOURCES), s => s.ticksToRegeneration));
+        const newSource = _.min(miner.room.find(FIND_SOURCES), s => s.ticksToRegeneration);
         creepMemory.sourcePoint = undefined;
         moveTo(miner, newSource)();
       } else {
