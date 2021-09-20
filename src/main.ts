@@ -5,17 +5,21 @@ import { towerRepairing } from 'utils/main-sections/tower-repairing';
 
 injectMethods();
 
-export const loop =
-wrapWithCount(
-  wrapWithStages(
-    (creepCount: CreepCounter) =>
-    {
-      creepActions();
-      towerRepairing();
-      renewIfNotBusy();
-      flagBuilding();
-      logging(creepCount);
-    }
-  )
-);
-
+export const loop = () => {
+  try {
+    wrapWithCount(
+      wrapWithStages(
+        (creepCount: CreepCounter) =>
+        {
+          creepActions();
+          towerRepairing();
+          renewIfNotBusy();
+          flagBuilding();
+          logging(creepCount);
+        }
+      )
+    )();
+  } catch (e) {
+    console.error(e);
+  }
+};

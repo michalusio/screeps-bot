@@ -18,10 +18,10 @@ export interface UpgraderMemory extends CreepRoleMemory {
 export const upgraderBody = (energyAvailable: number) => {
   const body: BodyPartConstant[] = [];
   let energy = energyAvailable;
-  if (energy < 50) return [];
-  body.push(MOVE);
-  energy -= 50;
-  while (body.length < 15) {
+  while (energy > 50 && body.length < 20) {
+    if (energy < 50) break;
+    body.push(MOVE);
+    energy -= 50;
     if (energy < 50) break;
     body.push(CARRY);
     energy -= 50;

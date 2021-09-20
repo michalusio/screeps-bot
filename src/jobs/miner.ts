@@ -17,7 +17,7 @@ export interface MinerMemory extends CreepRoleMemory {
 export const minerBody = (energyAvailable: number) => {
   const body: BodyPartConstant[] = [];
   let energy = energyAvailable;
-  while (body.length < 12) {
+  while (energy > 50 && body.length < 12) {
     if (energy < 50) break;
     body.push(MOVE);
     energy -= 50;

@@ -6,15 +6,20 @@ import { log } from './log';
 declare global {
   interface Memory {
     creepIndex?: number;
-    civilizationLevel: { [roomName: string]: number };
     roleCosts: { [role: string]: number };
-    orders: { [roomName: string]: { [role: string]: number } };
-    wallRepairs: { [roomName: string]: boolean };
   }
 
   interface Creep {
     roleMemory: CreepRoleMemory;
     wander(): CreepMoveReturnCode;
+  }
+
+  interface RoomMemory {
+    civilizationLevel: number;
+    orders: { [role: string]: number };
+    wallRepairs: boolean;
+    prioritizeBuilding: boolean;
+    mode: string;
   }
 
   interface RoomPosition {
@@ -46,8 +51,9 @@ export function injectMethods(): void {
   };
 
   global.order = function(roomName: string, role: string, howMany: number): void {
-    Memory.orders[roomName] = (Memory.orders[roomName] || {});
-    Memory.orders[roomName][role] = (Memory.orders[roomName][role] || 0) + howMany;
+    const room = new Room(roomName);
+    room.memory.orders = (room.memory.orders || {});
+    room.memory.orders[role] = (room.memory.orders[role] || 0) + howMany;
   };
 
   Room.prototype.getRoomNameOnSide = function(side: ExitConstant): string {
@@ -162,10 +168,10 @@ export function injectMethods(): void {
   Creep.prototype.wander = function(): CreepMoveReturnCode {
     if (!this.fatigue) {
       let direction = (Math.floor(Math.random() * 8) + 1) as DirectionConstant;
-      while (this.pos.getDirected(direction).isBorderCell()) {
-        direction = (Math.floor(Math.random() * 8) + 1) as DirectionConstant;
+      if (!this.pos.getDirected(direction).isBorderCell()) {
+        return this.move(direction);
       }
-      return this.move(direction);
+      else return ERR_BUSY;
     }
     else return ERR_TIRED;
   }

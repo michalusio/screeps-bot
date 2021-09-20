@@ -6,7 +6,8 @@
   "scripts": {
     "lint": "eslint \"src/**/*.ts\"",
     "build": "rollup -c",
-    "watch": "rollup -cw"
+    "watch": "rollup -cw",
+    "watch:pserver": "rollup -cw --environment DEST:pserver"
   },
   "engines": {
     "node": "10.x || 12.x"
@@ -28,6 +29,8 @@
     "lodash": "^3.10.1",
     "prettier": "^2.3.2",
     "rollup": "^2.56.2",
+    "rollup-plugin-clear": "^2.0.7",
+    "rollup-plugin-screeps": "^1.0.1",
     "rollup-plugin-typescript2": "^0.30.0",
     "ts-node": "^10.2.0",
     "tsconfig-paths": "^3.10.1",

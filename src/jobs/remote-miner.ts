@@ -20,7 +20,7 @@ export interface RemoteMinerMemory extends CreepRoleMemory {
 export const remoteMinerBody = (energyAvailable: number) => {
   const body: BodyPartConstant[] = [];
   let energy = energyAvailable;
-  while (body.length < 18) {
+  while (energy > 50 && body.length < 18) {
     if (energy < 50) break;
     body.push(MOVE);
     energy -= 50;
@@ -89,7 +89,7 @@ export function remoteMinerBehavior(creep: Creep): void {
       if (remoteMiner.room.name === creepMemory.originRoom) {
         const storage = getByIdOrNew(creepMemory.storagePoint, energyContainerNotFull(remoteMiner));
         if (!storage) break;
-        if (storage.store.getFreeCapacity(RESOURCE_ENERGY) === 0) {
+        if (!storage.store || storage.store.getFreeCapacity(RESOURCE_ENERGY) === 0) {
           changeState('hauling', remoteMiner);
           break;
         }

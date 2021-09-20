@@ -1,5 +1,3 @@
-import { log } from 'utils/log';
-
 import { Placement } from './placement';
 
 const range = _.range(-4, 5);
@@ -18,9 +16,6 @@ export const spawnPlaza: Placement = {
       return range.flatMap(x => range.filter(y => ((x + y + 20) % 2) === 0).map(y => new RoomPosition(s.pos.x + x, s.pos.y + y, room.name)));
     });
 
-    const toPlace = positions.filter(pos => pos.isEmpty());
-    log(toPlace.join(','));
-
-    toPlace.forEach(p => p.createConstructionSite(STRUCTURE_ROAD));
+    positions.filter(pos => pos.isEmpty()).forEach(p => p.createConstructionSite(STRUCTURE_ROAD));
   }
 }

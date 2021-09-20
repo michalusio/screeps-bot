@@ -19,7 +19,7 @@ export interface HaulerMemory extends CreepRoleMemory {
 export const haulerBody = (energyAvailable: number) => {
   const body: BodyPartConstant[] = [];
   let energy = energyAvailable;
-  while (true) {
+  while (energy > 50 && body.length < 50) {
     if (energy < 50 || body.length === 50) break;
     body.push(MOVE);
     energy -= 50;
@@ -75,7 +75,7 @@ export function haulerBehavior(creep: Creep): void {
     case 'storing':
       const storage = getByIdOrNew(creepMemory.storagePoint, energyContainerNotFull(hauler));
       if (!storage) break;
-      if (storage.store.getFreeCapacity(RESOURCE_ENERGY) === 0) {
+      if (!storage.store || storage.store.getFreeCapacity(RESOURCE_ENERGY) === 0) {
         changeState('storing', hauler);
         break;
       }

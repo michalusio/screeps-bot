@@ -14,8 +14,9 @@ export function logging(creepCount: CreepCounter): void {
   creepCount.forEach(c => totalCreeps += c.overall);
   const sumCpu = roles.map(r => Memory.roleCosts[r] || 0).reduce((a, b) => a + b, 0.0001);
 
-  creepCount.forEach((room, roomName) => {
-    const visual = Game.rooms[roomName].visual;
+  creepCount.forEach((roomCounter, roomName) => {
+    const room = Game.rooms[roomName];
+    const visual = room.visual;
     new Renderer(visual)
       .table(tb => {
         tb.addHeader(['Bucket'.padEnd(16, ' '), 'CPU'.padEnd(7, ' ')])
@@ -23,8 +24,8 @@ export function logging(creepCount: CreepCounter): void {
       })
       .hr()
       .table(tb => {
-        tb.addHeader(['Room', 'E-lvl', ...roles]);
-        creepCount.forEach((room, roomName) => tb.addRow([roomName, civilizationEnergyLevel(roomName).toString(), ...roles.map(v => room.perRole[v]?.toString() ?? '0')]));
+        tb.addHeader(['Room', 'E-lvl', ...roles, 'Mode'.padEnd(9, ' ')]);
+        creepCount.forEach((roomCounter, roomName) => tb.addRow([roomName, civilizationEnergyLevel(room).toString(), ...roles.map(v => roomCounter.perRole[v]?.toString() ?? '0'), room.memory.mode]));
       })
       .hr()
       .table(tb => {

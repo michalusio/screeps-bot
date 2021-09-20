@@ -9,7 +9,7 @@ const emptyPriority = {
   'spawn': 4,
   'extension': 3,
   'container': 2,
-  'storage': 1
+  'storage': 2
 };
 
 const notEmptyContainerCache: { value: [(StructureContainer | StructureStorage)[], (StructureContainer | StructureStorage)[]], time: number } = { value: [[],[]], time: 0 };
@@ -43,7 +43,7 @@ export function energyContainerNotFull(creep: Creep): () => StructureStorage | S
 }
 
 function fillByStructureTypeThenRange(creep: Creep): (s: StructureContainer | StructureStorage | StructureExtension | StructureSpawn) => number {
-  return s => fillPriority[s.structureType]*10000 + s.pos.getRangeTo(creep.pos);
+  return s => fillPriority[s.structureType]*10000 - s.pos.getRangeTo(creep.pos);
 }
 
 function emptyByStructureTypeThenRange(creep: Creep): (s: StructureContainer | StructureStorage | StructureExtension | StructureSpawn) => number {

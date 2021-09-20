@@ -12,7 +12,6 @@ export function wrapWithCount(loop: (creepCount: CreepCounter) => void): () => v
       Memory.creepIndex = 0;
     }
     Memory.roleCosts = {};
-    Memory.wallRepairs = Memory.wallRepairs || {};
     let creepCount: CreepCounter = new Map();
     // Automatically delete memory of missing creeps
     for (const name in Memory.creeps) {

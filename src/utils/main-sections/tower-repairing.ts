@@ -31,7 +31,7 @@ export function towerRepairing(): void {
     const towers = room.find<FIND_MY_STRUCTURES, StructureTower>(FIND_MY_STRUCTURES, { filter: structure => structure.structureType === STRUCTURE_TOWER && structure.store.getUsedCapacity(RESOURCE_ENERGY) > 0 });
     if (towers.length === 0) return;
 
-    const toRepair = _.sortBy(room.find(FIND_STRUCTURES, { filter: s => s.hits < s.hitsMax && (Memory.wallRepairs[s.room.name] || (s.structureType !== 'constructedWall' && s.structureType !== 'rampart')) }), s => repairPriority[s.structureType] * 1000 - (s.hitsMax - s.hits)/s.hitsMax);
+    const toRepair = _.sortBy(room.find(FIND_STRUCTURES, { filter: s => s.hits < s.hitsMax && (s.room.memory.wallRepairs || (s.structureType !== 'constructedWall' && s.structureType !== 'rampart')) }), s => repairPriority[s.structureType] * 1000 - (s.hitsMax - s.hits)/s.hitsMax);
     const hurtCreeps = _.sortBy(room.find(FIND_MY_CREEPS, { filter: c => c.hits < c.hitsMax }), c => c.hits);
     const enemies = _.sortBy(room.find(FIND_HOSTILE_CREEPS), c => c.hits);
     towers
