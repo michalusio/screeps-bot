@@ -10,9 +10,6 @@ export function logging(creepCount: CreepCounter): void {
 
   const bucket = Game.cpu.bucket;
   const points = Math.floor(bucket/1000);
-  let totalCreeps = 0;
-  creepCount.forEach(c => totalCreeps += c.overall);
-  const sumCpu = roles.map(r => Memory.roleCosts[r] || 0).reduce((a, b) => a + b, 0.0001);
 
   creepCount.forEach((roomCounter, roomName) => {
     const room = Game.rooms[roomName];
@@ -26,17 +23,11 @@ export function logging(creepCount: CreepCounter): void {
       .table(tb => {
         tb.addHeader(['Room', 'E-lvl', ...roles, 'Mode'.padEnd(9, ' ')]);
         creepCount.forEach((roomCounter, roomName) => tb.addRow([roomName, civilizationEnergyLevel(room).toString(), ...roles.map(v => roomCounter.perRole[v]?.toString() ?? '0'), room.memory.mode]));
-      })
-      .hr()
-      .table(tb => {
-        tb.addHeader(['Total role CPU  ', formatCpu(sumCpu).padEnd(7, ' ')]);
-        roles.map(r => ([r, Math.floor((Memory.roleCosts[r]||0) * 100 / sumCpu)]) as [string, number])
-          .forEach(([r, mr]) => tb.addRow([r, [mr + '%', { color: mr > 50 ? 'maroon' : undefined }]]));
       });
 
     new Renderer(visual, 'right')
       .table(tb => {
-        tb.addHeader(['Message'.padEnd(64, ' '), 'Count']);
+        tb.addHeader(['Message'.padEnd(32, ' '), 'Count']);
         messages.forEach(msg => tb.addRow(['' + msg.message, [msg.repeats.toString(), { color: msg.repeats > 5 ? 'red' : undefined }]]));
       })
   });
@@ -58,7 +49,7 @@ export class Renderer {
   private internals: RendererInternals;
 
   constructor(visual: RoomVisual, side: 'left' | 'right' = 'left') {
-    this.internals = new RendererInternals(visual, { x: side === 'left' ? 0 : 30.5, y: 0, w: 35, h: 20 });
+    this.internals = new RendererInternals(visual, { x: side === 'left' ? 0 : 38.5, y: 0, w: 35, h: 20 });
   }
 
   public table(action: (tableBuilder: TableBuilder) => void): this {

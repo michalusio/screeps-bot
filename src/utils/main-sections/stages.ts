@@ -25,6 +25,9 @@ export function wrapWithStages(loop: (creepCount: CreepCounter) => void): (creep
     }
     creepCount.forEach((roomCounter, roomName) => {
       const room = Game.rooms[roomName];
+
+      if (room.find(FIND_MY_SPAWNS).length === 0) return;
+
       if (!room.memory.mode) {
         room.memory.mode = Bootstrap.name;
       }
@@ -41,6 +44,7 @@ export function wrapWithStages(loop: (creepCount: CreepCounter) => void): (creep
       const civLevel = (room.memory.civilizationLevel ?? 0) * 0.9 + stageIndex * 0.1;
       room.memory.civilizationLevel = Math.floor(civLevel * 100) / 100;
 
+      //
       const [nextRequirements, placementsToPlace] = getNextStageDelta(stageIndex, room, roomCounter);
 
       if (placementsToPlace.length > 0 && room.find(FIND_MY_CONSTRUCTION_SITES).length === 0) {
@@ -51,6 +55,7 @@ export function wrapWithStages(loop: (creepCount: CreepCounter) => void): (creep
         .find(FIND_MY_SPAWNS)
         .filter(spawn => !spawn.spawning && spawn.room.energyAvailable >= Math.min(spawn.room.energyCapacityAvailable, civilizationEnergyLevel(room)))
         .forEach(spawn => spawnRequirement(spawn, nextRequirements));
+      //*/
     });
 
     loop(creepCount);
@@ -103,6 +108,8 @@ function getCurrentStageIndex(room: Room, creepCount: RoomCreepCounter): number 
   return stageIndex;
 }
 
+const structureCache: { [room: string]: { [placement: string]: [boolean, number] } } = {};
+
 function getNextStageDelta(stageIndex: number, room: Room, creepCount: RoomCreepCounter): [RoleRequirements, Placement[]] {
   const nextStage = modes[room.memory.mode].stages[stageIndex + 1];
   if (!nextStage) {
@@ -113,14 +120,23 @@ function getNextStageDelta(stageIndex: number, room: Room, creepCount: RoomCreep
   for (const role in {...currentStage, ...nextStage.roles}) {
     nextRequirements[role] = Math.max(0, (nextStage.roles[role] ?? 0) - (creepCount.perRole[role] ?? 0));
   }
-  return [nextRequirements, (nextStage.structures || []).filter(p => !p.isPlaced(room))];
+  return [nextRequirements, (nextStage.structures || []).map(s => ([s, ...((structureCache[room.name] ? structureCache[room.name][s.name] : [false, -1]) ?? [false, -1])] as [Placement, boolean, number])).filter(p => {
+    if (p[2] < Game.time - 10) {
+      p[2] = Game.time;
+      p[1] = p[0].isPlaced(room);
+      structureCache[room.name] = structureCache[room.name] || {};
+      structureCache[room.name][p[0].name] = [p[1], p[2]];
+    }
+    return !p[1];
+  }).map(p => p[0])];
 }
 
 function performOrders(room: Room) {
-  if (room.memory.orders && room.memory.orders.length > 0) {
-    Object.keys(room.memory.orders).forEach(orderRole => {
-      if (room.memory.orders[orderRole] === 0) {
-        delete room.memory.orders[orderRole];
+  const orders = room.memory.orders;
+  if (orders && Object.keys(orders).length > 0) {
+    Object.keys(orders).forEach(orderRole => {
+      if (orders[orderRole] === 0) {
+        delete orders[orderRole];
       }
       else {
         room
@@ -134,7 +150,7 @@ function performOrders(room: Room) {
           const memory = roleUtilities[orderRole][1];
           const spawnCode = spawn.spawnCreep(body, `${orderRole}-${Memory.creepIndex}`, { memory: { ...memory, newCreep: true } });
           if (spawnCode === OK) {
-            room.memory.orders[orderRole]--;
+            orders[orderRole]--;
           }
         });
       }

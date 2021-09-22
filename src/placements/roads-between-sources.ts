@@ -1,4 +1,7 @@
+import { getPathFromCache } from 'cache/path-cache';
 import { Placement } from './placement';
+
+
 
 export const roadsBetweenSources: Placement = {
   name: 'Roads between Sources',
@@ -6,11 +9,8 @@ export const roadsBetweenSources: Placement = {
     const sources = room.find(FIND_SOURCES);
     return sources.every(source1 => {
       return sources.every(source2 => {
-        return source1 === source2 || source2.pos.findPathTo(source1, { ignoreCreeps: true, ignoreRoads: true })
-          .every(step => {
-            const pos = new RoomPosition(step.x, step.y, room.name);
-            return pos.hasRoad() || pos.isEqualTo(source2) || pos.isEqualTo(source1);
-          });
+        return source1 === source2 || getPathFromCache(source2, source1, room)
+          .every(pos => pos.isEqualTo(source2) || pos.isEqualTo(source1) || pos.hasRoad());
       });
     })
   },
@@ -19,13 +19,9 @@ export const roadsBetweenSources: Placement = {
     spawns.forEach(source1 => {
       spawns.forEach(source2 => {
         if (source1 === source2) return;
-        source2.pos.findPathTo(source1, { ignoreCreeps: true, ignoreRoads: true })
-          .forEach(step => {
-            const pos = new RoomPosition(step.x, step.y, room.name);
-            if (pos.isEmpty()) {
-              pos.createConstructionSite(STRUCTURE_ROAD);
-            }
-          });
+        getPathFromCache(source2, source1, room)
+          .filter(pos => pos.isEmpty())
+          .forEach(pos => pos.createConstructionSite(STRUCTURE_ROAD));
       });
     })
   }

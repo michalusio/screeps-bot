@@ -1,3 +1,4 @@
+import { getPathFromCache } from 'cache/path-cache';
 import { Placement } from './placement';
 
 export const roadsToController: Placement = {
@@ -7,11 +8,8 @@ export const roadsToController: Placement = {
     const controller = room.controller;
     const spawns = room.find(FIND_MY_SPAWNS);
     return spawns.every(spawn => {
-      return spawn.pos.findPathTo(controller, { ignoreCreeps: true, ignoreRoads: true })
-      .every(step => {
-        const pos = new RoomPosition(step.x, step.y, room.name);
-        return pos.hasRoad() || pos.isEqualTo(spawn) || pos.isEqualTo(controller);
-      });
+      return getPathFromCache(spawn, controller, room)
+      .every(pos => pos.isEqualTo(spawn) || pos.isEqualTo(controller) || pos.hasRoad());
     });
   },
   place: (room: Room) => {
@@ -19,13 +17,9 @@ export const roadsToController: Placement = {
     const controller = room.controller;
     const spawns = room.find(FIND_MY_SPAWNS);
     spawns.forEach(spawn => {
-      spawn.pos.findPathTo(controller, { ignoreCreeps: true, ignoreRoads: true })
-        .forEach(step => {
-          const pos = new RoomPosition(step.x, step.y, room.name);
-          if (pos.isEmpty()) {
-            pos.createConstructionSite(STRUCTURE_ROAD);
-          }
-        });
+      getPathFromCache(spawn, controller, room)
+        .filter(pos => pos.isEmpty())
+        .forEach(pos => pos.createConstructionSite(STRUCTURE_ROAD));
     });
   }
 };

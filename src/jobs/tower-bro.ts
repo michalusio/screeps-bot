@@ -45,7 +45,11 @@ export function towerbroBehavior(creep: Creep): void {
 
     case 'getting':
       const resource = getByIdOrNew(creepMemory.storagePoint, energyContainerNotEmpty(towerbro));
-      if (!resource) break;
+      if (!resource) {
+        changeState('getting', towerbro);
+        if (Game.time % 3 === 0) towerbro.wander();
+        break;
+      }
       creepMemory.storagePoint = resource.id;
       tryDoOrMove(() => towerbro.withdraw(resource, RESOURCE_ENERGY), moveTo(towerbro, resource));
       if (towerbro.store.getUsedCapacity(RESOURCE_ENERGY) >= towerbro.store.getCapacity()) {

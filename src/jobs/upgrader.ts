@@ -1,3 +1,4 @@
+import { WSAEINVALIDPROVIDER } from 'constants';
 import { energyContainerNotEmpty, getByIdOrNew, moveTo, tryDoOrMove } from 'utils/creeps';
 
 import { CreepRoleMemory, stateChanger } from '../utils/creeps/role-memory';
@@ -49,16 +50,22 @@ export function upgraderBehavior(creep: Creep): void {
 
     case 'sourcing':
       const source = getByIdOrNew(creepMemory.sourcePoint, energyContainerNotEmpty(upgrader));
-      if (!source) break;
+      if (!source) {
+        changeState('sourcing', upgrader);
+        if (Game.time % 3 === 0) upgrader.wander();
+        break;
+      }
       creepMemory.sourcePoint = source.id;
-      tryDoOrMove(() => upgrader.withdraw(source, RESOURCE_ENERGY), moveTo(upgrader, source));
+      if (tryDoOrMove(() => upgrader.withdraw(source, RESOURCE_ENERGY), moveTo(upgrader, source)) !== OK) {
+        upgrader.wander();
+      }
       if (upgrader.store.getUsedCapacity(RESOURCE_ENERGY) >= upgrader.store.getCapacity()) {
         changeState('upgrading', upgrader);
       }
       break;
 
     case 'upgrading':
-      const controller = upgrader.room.controller;;
+      const controller = upgrader.room.controller;
       if (!controller) break;
       tryDoOrMove(() => upgrader.upgradeController(controller), moveTo(upgrader, controller));
       if (upgrader.store.getUsedCapacity(RESOURCE_ENERGY) <= 0) {

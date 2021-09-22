@@ -1,3 +1,4 @@
+import { getPathFromCache } from 'cache/path-cache';
 import { Placement } from './placement';
 
 export const roadsToExits: Placement = {
@@ -14,10 +15,9 @@ export const roadsToExits: Placement = {
       .map(e => ([s, e]) as [StructureSpawn, RoomPosition])
     );
     return nearestExits.every(([spawn, exit]) =>
-      spawn.pos.findPathTo(exit, { ignoreCreeps: true, ignoreRoads: true })
-        .map(step => new RoomPosition(step.x, step.y, room.name))
+      getPathFromCache(spawn, exit, room)
         .filter(pos => !pos.isBorderCell())
-        .every(pos => pos.hasRoad() || pos.isEqualTo(spawn) || pos.isEqualTo(exit))
+        .every(pos => pos.isEqualTo(spawn) || pos.isEqualTo(exit) || pos.hasRoad())
     );
   },
   place: (room: Room) => {
@@ -32,8 +32,7 @@ export const roadsToExits: Placement = {
       .map(e => ([s, e]) as [StructureSpawn, RoomPosition])
     );
     nearestExits.forEach(([spawn, exit]) =>
-      spawn.pos.findPathTo(exit, { ignoreCreeps: true, ignoreRoads: true })
-        .map(step => new RoomPosition(step.x, step.y, room.name))
+      getPathFromCache(spawn, exit, room)
         .filter(pos => pos.isEmpty() && !pos.isBorderCell())
         .forEach(pos => pos.createConstructionSite(STRUCTURE_ROAD))
     );

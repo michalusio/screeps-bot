@@ -8,6 +8,7 @@
     "baseUrl": "src/",
     "sourceMap": true,
     "strict": true,
+    "esModuleInterop": true,
     "experimentalDecorators": true,
     "noImplicitReturns": true,
     "allowSyntheticDefaultImports": true,

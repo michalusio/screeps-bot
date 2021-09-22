@@ -15,8 +15,9 @@ function placeControllerContainer(room: Room): void {
     if (!controller) return;
     const controllerPos = controller.pos;
     const containerPlaces = controller.pos.getAround(2).filter(p => p.getRangeTo(controller) > 1)
-      .map(p => ([p, p.findInRange(FIND_STRUCTURES, 1, { filter: s => s.structureType === STRUCTURE_ROAD }).length]) as [RoomPosition, number])
+      .map(p => ([p, p.findInRange(FIND_STRUCTURES, 1).filter(s => s.structureType === STRUCTURE_ROAD).length]) as [RoomPosition, number])
       .filter(p => p[1] > 0);
+    containerPlaces.forEach(p => room.visual.circle(p[0].x, p[0].y, { stroke: 'red' }));
     if (containerPlaces.some(p => p[0].lookFor(LOOK_STRUCTURES).filter(s => s.structureType === STRUCTURE_CONTAINER).length > 0)) return;
     const firstSortedPlace = _.min(containerPlaces.filter(([p]) => p.isEmpty()), ([p, roads]) => (p.x - controllerPos.x) * (p.x - controllerPos.x) + (p.y - controllerPos.y) * (p.y - controllerPos.y) - roads);
     firstSortedPlace[0].createConstructionSite(STRUCTURE_CONTAINER);
@@ -29,7 +30,8 @@ function placeSourceContainers(room: Room): void {
   const preferredPosition = new RoomPosition(preferredPositionSum[0] / (spawns.length + sources.length), preferredPositionSum[1] / (spawns.length + sources.length), room.name);
 
   const alreadyPlaced = preferredPosition.getAround(2).flatMap(p => p.lookFor(LOOK_STRUCTURES).filter(s => s.structureType === STRUCTURE_CONTAINER)).length;
-  if (2 - alreadyPlaced > 0) return;
-  const containerPlaces = preferredPosition.getAround(2).filter(p => p.isEmpty() && p.findInRange(FIND_STRUCTURES, 1, { filter: s => s.structureType === STRUCTURE_ROAD }).length > 0);
+
+  if (2 - alreadyPlaced <= 0) return;
+  const containerPlaces = preferredPosition.getAround(2).filter(p => p.isEmpty() && p.findInRange(FIND_STRUCTURES, 1).filter(s => s.structureType === STRUCTURE_ROAD).length > 0);
   _.sample(containerPlaces, 2 - alreadyPlaced).forEach(p => p.createConstructionSite(STRUCTURE_CONTAINER));
 }

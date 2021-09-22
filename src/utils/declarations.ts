@@ -6,7 +6,6 @@ import { log } from './log';
 declare global {
   interface Memory {
     creepIndex?: number;
-    roleCosts: { [role: string]: number };
   }
 
   interface Creep {
@@ -29,6 +28,7 @@ declare global {
     isBorderCell(): boolean;
     isEmpty(): boolean;
     hasRoad(): boolean;
+    _hasRoad?: boolean;
   }
 
   interface Room {
@@ -37,6 +37,7 @@ declare global {
 
   function assignRemotes(howMany: number, roomName: string): void;
   function order(roomName: string, role: string, howMany: number): void;
+
 }
 
 export function injectMethods(): void {
@@ -118,7 +119,10 @@ export function injectMethods(): void {
   }
 
   RoomPosition.prototype.hasRoad = function(): boolean {
-    return this.look().some(l => (l.type === 'structure' && l.structure?.structureType === 'road') || (l.type === 'constructionSite' && l.constructionSite?.structureType === 'road'));
+    if (this._hasRoad === null || this._hasRoad === undefined) {
+      this._hasRoad = this.lookFor(LOOK_STRUCTURES).some(l => l.structureType === 'road') || this.lookFor(LOOK_CONSTRUCTION_SITES).some(l => l.structureType === 'road');
+    }
+    return this._hasRoad;
   };
 
   RoomPosition.prototype.getAround = function(range: number): RoomPosition[] {

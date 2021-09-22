@@ -100,7 +100,9 @@ function changeStateIfFull(builder: Builder, creepMemory: BuilderMemory) {
   if (builder.store.getUsedCapacity(RESOURCE_ENERGY) >= builder.store.getCapacity()) {
     if (builder.room.memory.prioritizeBuilding) {
       if (builder.room.find(FIND_MY_CONSTRUCTION_SITES).length === 0) {
-        changeState('repairing', builder);
+        if (creepMemory.repairPoint || structuresToRepair(builder.room).length > 0) {
+          changeState('repairing', builder);
+        } else if (Game.time % 3 === 0) builder.wander();
       }
       else {
         changeState('building', builder);
@@ -111,7 +113,9 @@ function changeStateIfFull(builder: Builder, creepMemory: BuilderMemory) {
         changeState('repairing', builder);
       }
       else {
-        changeState('building', builder);
+        if (builder.room.find(FIND_MY_CONSTRUCTION_SITES).length === 0) {
+          changeState('building', builder);
+        } else if (Game.time % 3 === 0) builder.wander();
       }
     }
   }
