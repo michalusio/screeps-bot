@@ -1,14 +1,13 @@
 export let messages: Log[] = [];
 
-type Log = { message: unknown, repeats: number, time: number[] };
+type Log = { message: unknown; repeats: number; time: number[] };
 
-export function log(message: any): void {
+export function log(message: unknown): void {
   const msg = _.find(messages, m => m.message === message);
   if (msg) {
     msg.repeats++;
     msg.time.push(Game.time);
-  }
-  else messages.push({ message, repeats: 1, time: [Game.time] });
+  } else messages.push({ message, repeats: 1, time: [Game.time] });
 }
 
 export function pruneLogs(): void {

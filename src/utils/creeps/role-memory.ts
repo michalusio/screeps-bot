@@ -8,14 +8,19 @@ export interface CreepRoleMemory extends CreepMemory {
   state: string;
 }
 
-export function stateChanger<T extends CreepRoleMemory & { state: string; }>(...clears: OptionalKeys<T>[]): (state: T['state'], creep: Creep & { memory: T }) => void {
+export function stateChanger<T extends CreepRoleMemory & { state: string }>(
+  ...clears: (OptionalKeys<T> & string)[]
+): (state: T["state"], creep: Creep & { memory: T }) => void {
   return (state, creep) => {
     const memory = creep.memory;
-    clears.forEach(clear => (memory as any)[clear] = undefined);
+    clears.forEach(clear => ((memory as unknown as { [key: string]: unknown })[clear] = undefined));
     if (memory.state !== state) {
-      creep.room.visual
-        .text(state, creep.pos.x, creep.pos.y - 1, { align: 'center', backgroundColor: 'gray', backgroundPadding: 0.15 });
+      creep.room.visual.text(state, creep.pos.x, creep.pos.y - 1, {
+        align: "center",
+        backgroundColor: "gray",
+        backgroundPadding: 0.15
+      });
     }
     memory.state = state;
-  }
+  };
 }

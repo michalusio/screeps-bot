@@ -1,4 +1,4 @@
-import { civilizationEnergyLevel } from './stages';
+import { civilizationEnergyLevel } from "./stages";
 
 export function renewIfNotBusy(): void {
   for (const spawnName in Game.spawns) {
@@ -8,14 +8,18 @@ export function renewIfNotBusy(): void {
     }
     const nearestCreep = spawn.pos.findInRange(FIND_MY_CREEPS, 1);
     for (const creep of nearestCreep) {
-      if ((creep.ticksToLive ?? 600) < 100 && creep.store.getUsedCapacity() === 0) {
+      if (
+        creep.roleMemory.role === "sacrifice" ||
+        ((creep.ticksToLive ?? 600) < 100 && creep.store.getUsedCapacity() === 0)
+      ) {
         spawn.recycleCreep(creep);
         break;
       }
-      if (costOf(creep) < Math.min(spawn.room.energyCapacityAvailable, civilizationEnergyLevel(spawn.room))/2) {
+      if (costOf(creep) < Math.min(spawn.room.energyCapacityAvailable, civilizationEnergyLevel(spawn.room)) / 2) {
         continue;
       }
-      if ((creep.ticksToLive ?? 1000) < 1000 && spawn.renewCreep(creep) === OK) break;
+      if ((creep.ticksToLive ?? 1000) < 1000 && (600 / creep.body.length) % 1 < 0.3 && spawn.renewCreep(creep) === OK)
+        break;
     }
   }
 }

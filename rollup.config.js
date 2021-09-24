@@ -5,8 +5,7 @@ import screeps from 'rollup-plugin-screeps';
 import typescript from 'rollup-plugin-typescript2';
 import jscc from 'rollup-plugin-jscc';
 
-
-"use strict";
+("use strict");
 
 let cfg;
 const dest = process.env.DEST;
