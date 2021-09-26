@@ -1,4 +1,4 @@
-import { energyContainerNotEmpty, getByIdOrNew, tryDoOrMove } from "utils/creeps";
+import { energyContainerNotEmpty, fillBody, getByIdOrNew, tryDoOrMove } from "utils/creeps";
 
 import { CreepRoleMemory, stateChanger } from "../utils/creeps/role-memory";
 
@@ -14,22 +14,7 @@ export interface UpgraderMemory extends CreepRoleMemory {
   state: "upgrading" | "sourcing";
 }
 
-export const upgraderBody = (energyAvailable: number): BodyPartConstant[] => {
-  const body: BodyPartConstant[] = [];
-  let energy = energyAvailable;
-  while (energy > 50 && body.length < 20) {
-    if (energy < 50) break;
-    body.push(MOVE);
-    energy -= 50;
-    if (energy < 50) break;
-    body.push(CARRY);
-    energy -= 50;
-    if (energy < 100) break;
-    body.push(WORK);
-    energy -= 100;
-  }
-  return body;
-};
+export const upgraderBody = fillBody.bind(undefined, 20, [MOVE, CARRY, WORK]);
 
 export const upgraderMemory: UpgraderMemory = {
   newCreep: true,
@@ -64,7 +49,14 @@ export function upgraderBehavior(creep: Creep): void {
       {
         const controller = upgrader.room.controller;
         if (!controller) break;
-        tryDoOrMove(() => upgrader.upgradeController(controller), upgrader.travelTo(controller));
+        if (!controller.sign) {
+          tryDoOrMove(
+            () => upgrader.signController(controller, "MichA_I. All your base are belong to us."),
+            upgrader.travelTo(controller)
+          );
+        } else {
+          tryDoOrMove(() => upgrader.upgradeController(controller), upgrader.travelTo(controller));
+        }
         if (upgrader.store.getUsedCapacity(RESOURCE_ENERGY) <= 0) {
           changeState("sourcing", upgrader);
         }

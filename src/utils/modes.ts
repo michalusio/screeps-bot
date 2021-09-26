@@ -8,6 +8,7 @@ import { roadsToController } from "placements/roads-to-controller";
 import { roadsToExits } from "placements/roads-to-exits";
 import { roadsToSources } from "placements/roads-to-sources";
 import { spawnPlaza } from "placements/spawn-plaza";
+import { link, storage } from "placements/storage-and-link";
 
 export interface RoleRequirements {
   [key: string]: number;
@@ -40,7 +41,7 @@ export const Bootstrap = {
       { roles: { hauler: 3 }, structures: [roadsToController, spawnPlaza, rcl(3), extensionPlacer(10)] },
       { roles: { towerbro: 1, remoteminer: 2 }, structures: [placeContainers, placeTower(1)] },
       { roles: { remoteminer: 4, upgrader: 4 }, structures: [roadsToExits, rcl(4), extensionPlacer(20)] },
-      { roles: { remoteminer: 6 }, structures: [placeTower(2), rcl(5), extensionPlacer(30)] }
+      { roles: { remoteminer: 6, scout: 1 }, structures: [storage, placeTower(2), rcl(5), link, extensionPlacer(30)] }
     ];
   }
 };

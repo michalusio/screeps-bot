@@ -1,23 +1,21 @@
+import { mySpawns } from "cache/structure-cache";
+import { checkerBoard, deltaAround, toRoomPositions } from "utils/positions";
 import { Placement } from "./placement";
 
-const range = _.range(-4, 5);
+const rangeSize = 5;
 
 export const spawnPlaza: Placement = {
   name: "Spawn Plaza",
   isPlaced: (room: Room) => {
-    const positions = room.find(FIND_MY_SPAWNS).flatMap(s => {
-      return range.flatMap(x =>
-        range.filter(y => (x + y + 20) % 2 === 0).map(y => new RoomPosition(s.pos.x + x, s.pos.y + y, room.name))
-      );
-    });
+    const positions = mySpawns(room, 50).flatMap(s =>
+      toRoomPositions(checkerBoard(deltaAround(rangeSize, 1), true), s.pos)
+    );
     return positions.every(pos => !pos.isEmpty());
   },
   place: (room: Room) => {
-    const positions = room.find(FIND_MY_SPAWNS).flatMap(s => {
-      return range.flatMap(x =>
-        range.filter(y => (x + y + 20) % 2 === 0).map(y => new RoomPosition(s.pos.x + x, s.pos.y + y, room.name))
-      );
-    });
+    const positions = mySpawns(room, 50).flatMap(s =>
+      toRoomPositions(checkerBoard(deltaAround(rangeSize, 1), true), s.pos)
+    );
 
     positions.filter(pos => pos.isEmpty()).forEach(p => p.createConstructionSite(STRUCTURE_ROAD));
   }

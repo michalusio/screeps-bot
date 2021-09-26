@@ -1,4 +1,4 @@
-import { getByIdOrNew, tryDoOrMove } from "utils/creeps";
+import { fillBody, getByIdOrNew, tryDoOrMove } from "utils/creeps";
 
 import { CreepRoleMemory } from "../utils/creeps/role-memory";
 
@@ -14,28 +14,7 @@ export interface MinerMemory extends CreepRoleMemory {
   state: "mining";
 }
 
-export const minerBody = (energyAvailable: number): BodyPartConstant[] => {
-  const body: BodyPartConstant[] = [];
-  let energy = energyAvailable;
-  while (energy > 50 && body.length < 12) {
-    if (energy < 50) break;
-    body.push(MOVE);
-    energy -= 50;
-    if (energy < 100) break;
-    body.push(WORK);
-    energy -= 100;
-    if (energy < 100) break;
-    body.push(WORK);
-    energy -= 100;
-    if (energy < 100) break;
-    body.push(WORK);
-    energy -= 100;
-    if (energy < 100) break;
-    body.push(WORK);
-    energy -= 100;
-  }
-  return body;
-};
+export const minerBody = fillBody.bind(undefined, 12, [MOVE, WORK, WORK, WORK, WORK]);
 
 export const minerMemory: MinerMemory = {
   newCreep: true,

@@ -1,4 +1,5 @@
-import { energyContainerNotEmpty, getByIdOrNew, structuresToRepair, tryDoOrMove } from "utils/creeps";
+import { structuresToRepair } from "cache/structure-cache";
+import { energyContainerNotEmpty, fillBody, getByIdOrNew, tryDoOrMove } from "utils/creeps";
 
 import { CreepRoleMemory, stateChanger } from "../utils/creeps/role-memory";
 import { beginSacrifice } from "./sacrifice";
@@ -18,17 +19,7 @@ export interface BuilderMemory extends CreepRoleMemory {
   state: "building" | "repairing" | "sourcing";
 }
 
-export const builderBody = (energyAvailable: number): BodyPartConstant[] => {
-  if (energyAvailable < BODYPART_COST[MOVE]) return [];
-  const body: BodyPartConstant[] = [MOVE];
-  let energy = energyAvailable - BODYPART_COST[MOVE];
-  while (energy >= 150 && body.length < 20) {
-    body.push(WORK);
-    body.push(CARRY);
-    energy -= 150;
-  }
-  return body;
-};
+export const builderBody = fillBody.bind(undefined, 20, [WORK, CARRY, MOVE]);
 
 export const builderMemory: BuilderMemory = {
   newCreep: true,
@@ -57,11 +48,11 @@ export function builderBehavior(creep: Creep): void {
             _.sample(builder.room.find(FIND_RUINS).filter(r => r.store.getUsedCapacity(RESOURCE_ENERGY) > 0)) ??
             energyContainerNotEmpty(builder)()
         );
-        if (!source || !source.store) {
+        if (!source || !source.store || source.store.getUsedCapacity(RESOURCE_ENERGY) === 0) {
           if (Game.time % 3 === 0) {
             builder.wander();
-            creepMemory.sourcePoint = undefined;
           }
+          creepMemory.sourcePoint = undefined;
           break;
         }
         if (source.store.getUsedCapacity(RESOURCE_ENERGY) < 200 && !(source instanceof Ruin)) {
@@ -96,7 +87,7 @@ export function builderBehavior(creep: Creep): void {
 
     case "repairing":
       {
-        const site = getByIdOrNew(creepMemory.repairPoint, () => _.sample(structuresToRepair(builder.room)));
+        const site = getByIdOrNew(creepMemory.repairPoint, () => _.sample(structuresToRepair(builder.room, 2)));
         if (!site || site.hits >= site.hitsMax) {
           changeState("sourcing", builder);
           break;
@@ -117,14 +108,14 @@ function changeStateIfFull(builder: Builder, creepMemory: BuilderMemory) {
   if (builder.store.getUsedCapacity(RESOURCE_ENERGY) >= builder.store.getCapacity()) {
     if (builder.room.memory.prioritizeBuilding) {
       if (builder.room.find(FIND_MY_CONSTRUCTION_SITES).length === 0) {
-        if (creepMemory.repairPoint || structuresToRepair(builder.room).length > 0) {
+        if (creepMemory.repairPoint || structuresToRepair(builder.room, 2).length > 0) {
           changeState("repairing", builder);
         } else if (Game.time % 3 === 0) builder.wander();
       } else {
         changeState("building", builder);
       }
     } else {
-      if (creepMemory.repairPoint || structuresToRepair(builder.room).length > 0) {
+      if (creepMemory.repairPoint || structuresToRepair(builder.room, 2).length > 0) {
         changeState("repairing", builder);
       } else {
         if (builder.room.find(FIND_MY_CONSTRUCTION_SITES).length === 0) {

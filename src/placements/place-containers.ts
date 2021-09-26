@@ -1,9 +1,14 @@
+import { mySpawns } from "cache/structure-cache";
 import { Placement } from "./placement";
 
 export const placeContainers: Placement = {
   name: "Place Containers",
   isPlaced: (room: Room) => {
-    return room.find(FIND_STRUCTURES).filter(s => s.structureType === STRUCTURE_CONTAINER).length > 2;
+    return (
+      room.find(FIND_STRUCTURES).filter(s => s.structureType === STRUCTURE_CONTAINER).length +
+        (room.find(FIND_MY_STRUCTURES).filter(s => s.structureType === "link").length ? 1 : 0) >
+      2
+    );
   },
   place: (room: Room) => {
     placeControllerContainer(room);
@@ -42,7 +47,7 @@ function placeControllerContainer(room: Room): void {
 
 function placeSourceContainers(room: Room): void {
   const sources = room.find(FIND_SOURCES);
-  const spawns = room.find(FIND_MY_SPAWNS);
+  const spawns = mySpawns(room, 50);
   const preferredPositionSum = spawns.reduce(
     (c, s) => [c[0] + s.pos.x, c[1] + s.pos.y] as [number, number],
     sources.reduce((c, s) => [c[0] + s.pos.x, c[1] + s.pos.y] as [number, number], [0, 0] as [number, number])

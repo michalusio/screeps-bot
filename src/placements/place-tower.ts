@@ -1,3 +1,4 @@
+import { mySpawns } from "cache/structure-cache";
 import { log } from "utils/log";
 
 import { Placement } from "./placement";
@@ -11,7 +12,7 @@ export const placeTower: (n: number) => Placement = (n: number) => ({
       room.find(FIND_MY_STRUCTURES).filter(s => s.structureType === STRUCTURE_TOWER).length -
       room.find(FIND_MY_CONSTRUCTION_SITES).filter(s => s.structureType === STRUCTURE_TOWER).length;
     if (toTake > 0) {
-      const spawns = room.find(FIND_MY_SPAWNS);
+      const spawns = mySpawns(room, 50);
       const allEmptyPositionsAroundSpawns = spawns.flatMap(spawn =>
         spawn.pos.getAround(6).filter(p => p.getRangeTo(spawn) >= 4 && p.isEmpty())
       );

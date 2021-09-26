@@ -1,15 +1,17 @@
+import { mySpawns } from "cache/structure-cache";
+
 const fillPriority = {
   spawn: 1,
   extension: 2,
-  container: 3,
-  storage: 4
+  storage: 3,
+  container: 4
 };
 
 const emptyPriority = {
   spawn: 4,
   extension: 3,
-  container: 2,
-  storage: 2
+  storage: 2,
+  container: 2
 };
 
 const notEmptyContainerCache: {
@@ -36,7 +38,7 @@ export function energyContainerNotEmpty(
     return (
       _.min(withEnergy, emptyByStructureTypeThenRange(creep)) ??
       (filtered.length === 0
-        ? _.sample(creep.room.find(FIND_MY_SPAWNS).filter(s => s.store.getUsedCapacity(RESOURCE_ENERGY) > 200))
+        ? _.sample(mySpawns(creep.room, 50).filter(s => s.store.getUsedCapacity(RESOURCE_ENERGY) > 200))
         : undefined)
     );
   };

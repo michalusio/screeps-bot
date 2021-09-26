@@ -1,4 +1,4 @@
-import { energyContainerNotEmpty, getByIdOrNew, tryDoOrMove } from "utils/creeps";
+import { energyContainerNotEmpty, fillBody, getByIdOrNew, tryDoOrMove } from "utils/creeps";
 
 import { CreepRoleMemory, stateChanger } from "../utils/creeps/role-memory";
 
@@ -16,19 +16,7 @@ export interface TowerBroMemory extends CreepRoleMemory {
   state: "getting" | "storing";
 }
 
-export const towerbroBody = (energyAvailable: number): BodyPartConstant[] => {
-  const body: BodyPartConstant[] = [];
-  let energy = energyAvailable;
-  while (energy > 50 && body.length < 10) {
-    if (energy < 50 || body.length === 50) break;
-    body.push(MOVE);
-    energy -= 50;
-    if (energy < 50 || body.length === 50) break;
-    body.push(CARRY);
-    energy -= 50;
-  }
-  return body;
-};
+export const towerbroBody = fillBody.bind(undefined, 8, [MOVE, CARRY]);
 
 export const towerbroMemory: TowerBroMemory = {
   newCreep: true,

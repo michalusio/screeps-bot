@@ -1,4 +1,4 @@
-import { energyContainerNotFull, getByIdOrNew, tryDoOrMove } from "utils/creeps";
+import { energyContainerNotFull, fillBody, getByIdOrNew, tryDoOrMove } from "utils/creeps";
 
 import { CreepRoleMemory, stateChanger } from "../utils/creeps/role-memory";
 
@@ -17,19 +17,7 @@ export interface HaulerMemory extends CreepRoleMemory {
   state: "getting" | "storing";
 }
 
-export const haulerBody = (energyAvailable: number): BodyPartConstant[] => {
-  const body: BodyPartConstant[] = [];
-  let energy = energyAvailable;
-  while (energy > 50 && body.length < 20) {
-    if (energy < 50) break;
-    body.push(MOVE);
-    energy -= 50;
-    if (energy < 50) break;
-    body.push(CARRY);
-    energy -= 50;
-  }
-  return body;
-};
+export const haulerBody = fillBody.bind(undefined, 20, [MOVE, CARRY]);
 
 export const haulerMemory: HaulerMemory = {
   newCreep: true,
@@ -51,7 +39,7 @@ const findNewResource = (hauler: Hauler) => () => {
           Game.time
         ];
   return _.find(
-    _.sortBy(resourceCache[hauler.room.name][0], r => r.pos.getRangeTo(hauler.pos) * 10 - r.amount),
+    _.sortBy(resourceCache[hauler.room.name][0], r => r.pos.getRangeTo(hauler.pos) * 10),
     r => r.pos.getFreeSpaceAround() > 0 || r.pos.isNearTo(hauler)
   );
 };

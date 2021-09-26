@@ -2,20 +2,18 @@ export function getByIdOrNew<T>(id: Id<T> | undefined, getNew: () => T | undefin
   return (id ? Game.getObjectById(id) : undefined) ?? getNew();
 }
 
-const structuresToRepairCache: { [roomName: string]: [AnyStructure[], number] } = {};
-
-export function structuresToRepair(room: Room): AnyStructure[] {
-  if (!structuresToRepairCache[room.name] || structuresToRepairCache[room.name][1] !== Game.time) {
-    structuresToRepairCache[room.name] = [
-      room
-        .find(FIND_STRUCTURES)
-        .filter(
-          s =>
-            (s.structureType !== "constructedWall" && s.structureType !== "rampart" && s.hitsMax / 2 > s.hits) ||
-            s.hits / 100 > s.hits
-        ),
-      Game.time
-    ];
+export function fillBody(upTo: number, sequence: BodyPartConstant[], energy: number): BodyPartConstant[] {
+  let remaining = energy;
+  const result: BodyPartConstant[] = [];
+  while (remaining > 0 && result.length < upTo) {
+    for (const part of sequence) {
+      const partCost = BODYPART_COST[part];
+      if (partCost > remaining || result.length >= upTo) {
+        return result;
+      }
+      result.push(part);
+      remaining -= partCost;
+    }
   }
-  return structuresToRepairCache[room.name][0];
+  return result;
 }

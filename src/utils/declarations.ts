@@ -1,8 +1,30 @@
+import { extensionsToSpawnFrom } from "cache/structure-cache";
 import { RemoteMinerMemory } from "jobs/remote-miner";
 import { MoveToReturnCode } from "./creeps";
 
 import { CreepRoleMemory } from "./creeps/role-memory";
 import { log } from "./log";
+
+const BODYPART_PRIORITY: { [key: string]: number } = {
+  [TOUGH]: 0,
+  [WORK]: 1,
+  [CARRY]: 2,
+  [MOVE]: 3,
+  [ATTACK]: 4
+};
+
+export interface ScoutData {
+  roomName: string;
+  tick: number;
+  enemies: { [player: string]: number };
+  enemyStructures: { [player: string]: number };
+  spawn: boolean;
+  sources: number;
+  controllerLvl: number | null;
+  sourcesControllerAverageDistance: number;
+  swampRatio: number;
+  wallRatio: number;
+}
 
 declare global {
   interface String {
@@ -10,6 +32,10 @@ declare global {
   }
   interface Memory {
     creepIndex: number;
+    noRemoteMining: string[];
+    cpu: number[];
+    visuals: boolean;
+    scoutData: { [key: string]: ScoutData };
   }
 
   interface Creep {
@@ -17,6 +43,35 @@ declare global {
     wander(): CreepMoveReturnCode;
     travelTo(target: RoomPosition | _HasRoomPosition, avoid?: (room: Room) => RoomPosition[]): () => MoveToReturnCode;
     travelInto(target: RoomPosition | _HasRoomPosition, avoid?: (room: Room) => RoomPosition[]): MoveToReturnCode;
+  }
+
+  interface StructureSpawn {
+    /**
+     * Start the creep spawning process. The required energy amount can be withdrawn from all spawns and extensions in the room.
+     *
+     * @param body An array describing the new creep’s body. Should contain 1 to 50 elements with one of these constants:
+     *  * WORK
+     *  * MOVE
+     *  * CARRY
+     *  * ATTACK
+     *  * RANGED_ATTACK
+     *  * HEAL
+     *  * TOUGH
+     *  * CLAIM
+     * @param name The name of a new creep. It must be a unique creep name, i.e. the Game.creeps object should not contain another creep with the same name (hash key).
+     * @param opts An object with additional options for the spawning process.
+     * @returns One of the following codes:
+     * ```
+     * OK                       0   The operation has been scheduled successfully.
+     * ERR_NOT_OWNER            -1  You are not the owner of this spawn.
+     * ERR_NAME_EXISTS          -3  There is a creep with the same name already.
+     * ERR_BUSY                 -4  The spawn is already in process of spawning another creep.
+     * ERR_NOT_ENOUGH_ENERGY    -6  The spawn and its extensions contain not enough energy to create a creep with the given body.
+     * ERR_INVALID_ARGS         -10 Body is not properly described or name was not provided.
+     * ERR_RCL_NOT_ENOUGH       -14 Your Room Controller level is insufficient to use this spawn.
+     * ```
+     */
+    spawnCreepCached(body: BodyPartConstant[], name: string, opts?: SpawnOptions | undefined): ScreepsReturnCode;
   }
 
   interface RoomMemory {
@@ -118,23 +173,9 @@ export function injectMethods(): void {
     if (!Game.rooms[this.roomName]) {
       return 999;
     }
-    const fields = Game.rooms[this.roomName].lookForAtArea(
-      LOOK_TERRAIN,
-      this.y - 1,
-      this.x - 1,
-      this.y + 1,
-      this.x + 1,
-      true
-    );
-    const creeps = Game.rooms[this.roomName].lookForAtArea(
-      LOOK_CREEPS,
-      this.y - 1,
-      this.x - 1,
-      this.y + 1,
-      this.x + 1,
-      true
-    );
-    return 9 - _.countBy(fields, f => f.terrain).wall - creeps.length;
+
+    const area = Game.rooms[this.roomName].lookAtArea(this.y - 1, this.x - 1, this.y + 1, this.x + 1, true);
+    return 9 - _.sum(area, l => Number(l.terrain === "wall" || l.creep));
   };
 
   RoomPosition.prototype.isEmpty = function (): boolean {
@@ -200,6 +241,21 @@ export function injectMethods(): void {
     return this.x === 0 || this.x === 49 || this.y === 0 || this.y === 49;
   };
 
+  StructureSpawn.prototype.spawnCreepCached = function (
+    body: BodyPartConstant[],
+    name: string,
+    opts?: SpawnOptions
+  ): ScreepsReturnCode {
+    const extensions = extensionsToSpawnFrom(this.room, 50)
+      .map(id => Game.getObjectById(id))
+      .filter(o => o != null) as (StructureSpawn | StructureExtension)[];
+    return this.spawnCreep(
+      _.sortBy(body, part => BODYPART_PRIORITY[part]),
+      name,
+      { energyStructures: extensions, ...opts }
+    );
+  };
+
   Creep.prototype.wander = function (): CreepMoveReturnCode {
     if (!this.fatigue) {
       const direction = (Math.floor(Math.random() * 8) + 1) as DirectionConstant;
@@ -210,7 +266,7 @@ export function injectMethods(): void {
   };
 
   Creep.prototype.travelTo = function (
-    target: RoomPosition | { pos: RoomPosition },
+    target: RoomPosition | _HasRoomPosition,
     avoid?: (room: Room) => RoomPosition[]
   ): () => MoveToReturnCode {
     const avoided = avoid?.call(undefined, this.room) ?? [];
@@ -221,6 +277,8 @@ export function injectMethods(): void {
       this.pos.isNearTo(target)
         ? OK
         : this.moveTo(target, {
+            range: 1,
+            heuristicWeight: 1.5,
             reusePath: 10,
             visualizePathStyle: { stroke: "#" + hash.toString(16) },
             costCallback: avoid ? costCallback : undefined
@@ -228,7 +286,7 @@ export function injectMethods(): void {
   };
 
   Creep.prototype.travelInto = function (
-    target: RoomPosition | { pos: RoomPosition },
+    target: RoomPosition | _HasRoomPosition,
     avoid?: (room: Room) => RoomPosition[]
   ): MoveToReturnCode {
     const avoided = avoid?.call(undefined, this.room) ?? [];
@@ -237,6 +295,7 @@ export function injectMethods(): void {
     const hash = (this.roleMemory.role.hashCode() >> 8) & 0xffffff;
     return this.moveTo(target, {
       reusePath: 10,
+      heuristicWeight: 1.5,
       visualizePathStyle: { stroke: "#" + hash.toString(16) },
       costCallback: avoid ? costCallback : undefined
     });

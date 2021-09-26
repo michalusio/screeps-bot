@@ -1,3 +1,5 @@
+import { mySpawns } from "cache/structure-cache";
+
 export function sacrificeBehavior(creep: Creep): void {
   switch (creep.roleMemory.state) {
     case "blood for the blood god":
@@ -6,7 +8,7 @@ export function sacrificeBehavior(creep: Creep): void {
         backgroundColor: "gray",
         backgroundPadding: 0.15
       });
-      creep.travelTo(_.first(creep.room.find(FIND_MY_SPAWNS)))();
+      creep.travelTo(_.first(mySpawns(creep.room, 50)))();
       break;
   }
 }
