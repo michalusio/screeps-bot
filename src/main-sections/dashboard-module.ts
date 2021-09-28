@@ -4,6 +4,9 @@ import { civilizationEnergyLevel } from "./stages";
 
 export function logging(creepCount: CreepCounter): void {
   pruneLogs();
+
+  showScoutVisuals();
+
   if (Memory.cpu.length > 9) Memory.cpu.splice(0, Memory.cpu.length - 9);
   Memory.cpu.push(Game.cpu.getUsed());
 
@@ -18,28 +21,32 @@ export function logging(creepCount: CreepCounter): void {
 
   creepCount.forEach((_, roomName) => {
     const room = Game.rooms[roomName];
+    if (!room.memory) return;
     const visual = room.visual;
     Game.map.visual.text(room.memory.mode, new RoomPosition(25, 5, room.name), {
       fontFamily: "monospace",
       color: "#cccccc"
     });
-    Game.map.visual.text(room.memory.civilizationLevel.toFixed(1), new RoomPosition(25, 45, room.name), {
-      fontFamily: "monospace",
-      color: "#cccccc"
-    });
+    const level = room.memory.civilizationLevel;
+    if (level) {
+      Game.map.visual.text(level.toFixed(1), new RoomPosition(25, 45, room.name), {
+        fontFamily: "monospace",
+        color: "#cccccc"
+      });
+    }
     new Renderer(visual)
       .table(tb => {
         tb.addHeader(["Bucket".padEnd(16, " ")]).addRow([["★".repeat(points), { color: "yellow" }]]);
       })
       .hr()
       .table(tb => {
-        tb.addHeader(["Room", "E-lvl", ...roles, "Mode".padEnd(9, " ")]);
+        tb.addHeader(["Room", "E-lvl", ...roles, "Mode".padEnd(10, " ")]);
         creepCount.forEach((roomCounter, roomName) =>
-          tb.addRow([
+          tb.addRowConditional(Object.keys(Memory.rooms[roomName]).length > 0, [
             roomName,
-            civilizationEnergyLevel(room).toString(),
+            civilizationEnergyLevel(Memory.rooms[roomName].civilizationLevel).toString(),
             ...roles.map(v => roomCounter.perRole[v]?.toString() ?? "0"),
-            room.memory.mode
+            Memory.rooms[roomName].mode
           ])
         );
       })
@@ -64,10 +71,6 @@ export function logging(creepCount: CreepCounter): void {
   });
 }
 
-function formatCpu(cpu: number): string {
-  return (Math.floor(cpu * 10) / 10).toString();
-}
-
 type Rect = Readonly<{
   x: number;
   y: number;
@@ -79,7 +82,7 @@ export class Renderer {
   private internals: RendererInternals;
 
   constructor(visual: RoomVisual, side: "left" | "right" = "left") {
-    this.internals = new RendererInternals(visual, { x: side === "left" ? 0 : 32.5, y: 0, w: 35, h: 20 });
+    this.internals = new RendererInternals(visual, { x: side === "left" ? 0 : 32.5, y: 0, w: 40, h: 20 });
   }
 
   public table(action: (tableBuilder: TableBuilder) => void): this {
@@ -211,6 +214,11 @@ export class TableBuilder {
     this.renderer.newLine();
     return this;
   }
+
+  public addRowConditional(check: boolean, data: (string | [string, TextStyle])[]): this {
+    if (check) return this.addRow(data);
+    return this;
+  }
 }
 
 export class ChartBuilder {
@@ -277,4 +285,52 @@ export class ChartBuilder {
       );
     return this;
   }
+}
+function showScoutVisuals() {
+  const sortedByDistance = _.sortBy(
+    _.filter(
+      Memory.scoutData,
+      s =>
+        s.controllerLvl === 0 &&
+        Object.keys(s.enemyStructures).length === 0 &&
+        s.sourcesControllerAverageDistance < 99 &&
+        s.sources === 2
+    ),
+    s => s.sourcesControllerAverageDistance
+  );
+  const [min, max] = [
+    _.first(sortedByDistance).sourcesControllerAverageDistance,
+    _.last(sortedByDistance).sourcesControllerAverageDistance
+  ];
+  Object.keys(Memory.scoutData).forEach(roomName => {
+    const data = Memory.scoutData[roomName];
+    Game.map.visual.rect(new RoomPosition(0, 0, roomName), 50, 50, {
+      fill: Object.keys(data.enemyStructures).length > 0 ? "#ff5555" : "#55ff55",
+      opacity: Math.max(0, 0.5 - (Game.time - data.tick) / 5000)
+    });
+    if (
+      max !== min &&
+      data.controllerLvl === 0 &&
+      Object.keys(data.enemyStructures).length === 0 &&
+      data.sourcesControllerAverageDistance < 99
+    ) {
+      const averageDistance = (max - data.sourcesControllerAverageDistance) / (max - min);
+      const distHeight = Math.round(20 * averageDistance + 1);
+      Game.map.visual.rect(new RoomPosition(46, 50 - distHeight, roomName), 4, distHeight, {
+        fill: "#00ff00",
+        opacity: 1
+      });
+      const allure =
+        averageDistance * 0.5 +
+        Math.min(10, _.sum(data.enemies)) * -0.1 +
+        data.sources * 0.2 +
+        data.swampRatio * -0.1 +
+        Math.abs(data.wallRatio - 0.3) * -0.1;
+      const allureHeight = Math.round(20 * Math.min(1, Math.max(0, allure)) + 1);
+      Game.map.visual.rect(new RoomPosition(42, 50 - allureHeight, roomName), 4, allureHeight, {
+        fill: "#ffffff",
+        opacity: 1
+      });
+    }
+  });
 }

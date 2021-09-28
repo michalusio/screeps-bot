@@ -68,7 +68,7 @@ export function builderBehavior(creep: Creep): void {
     case "building":
       {
         const site = getByIdOrNew(creepMemory.buildPoint, () =>
-          _.min(
+          minBy(
             builder.room.find(FIND_CONSTRUCTION_SITES),
             s => s.progressTotal - s.progress + s.pos.getRangeTo(builder) * 100
           )

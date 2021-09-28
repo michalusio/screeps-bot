@@ -44,12 +44,16 @@ export function scoutBehavior(creep: Creep): void {
         }
         if (!pos) {
           let dir: FIND_EXIT_TOP | FIND_EXIT_BOTTOM | FIND_EXIT_RIGHT | FIND_EXIT_LEFT = creepMemory.lastDirection;
+          const reverseLastDirection = ((dir + 3) % 8) + 1;
           let tries = 10;
           do {
             dir = randomExit();
             tries--;
-          } while (tries > 0 && (dir === creepMemory.lastDirection || !(pos = creep.pos.findClosestByRange(dir))));
-          if (!pos) return;
+          } while (tries > 0 && (dir === reverseLastDirection || !(pos = creep.pos.findClosestByPath(dir))));
+          if (!pos) {
+            creepMemory.exitPosition = null;
+            return;
+          }
           creepMemory.lastDirection = dir;
           creepMemory.exitPosition = { x: pos.x, y: pos.y, room: pos.roomName };
         }
@@ -85,16 +89,23 @@ function performScouting(creep: Creep) {
 
       const sources = creep.room.find(FIND_SOURCES).map(s => s.pos);
       const controller = creep.room.controller;
-      const count = sources.length + (controller ? 1 : 0);
-      if (count === 0) {
-        sourcesControllerAverageDistance = Number.MAX_VALUE;
+      if (!controller || sources.length === 0) {
+        sourcesControllerAverageDistance = 100;
       } else {
-        const x = sources.reduce((sum, s) => sum + s.x, controller?.pos.x ?? 0) / count;
-        const y = sources.reduce((sum, s) => sum + s.y, controller?.pos.y ?? 0) / count;
-        const oneSource = sources[0];
-        sourcesControllerAverageDistance = Math.sqrt(
-          (x - oneSource.x) * (x - oneSource.x) + (y - oneSource.y) * (y - oneSource.y)
-        );
+        sourcesControllerAverageDistance =
+          sources.reduce(
+            (acc, s) =>
+              acc +
+              _.sum(
+                creep.room.findPath(s, controller.pos, {
+                  ignoreCreeps: true,
+                  ignoreRoads: true,
+                  ignoreDestructibleStructures: true
+                }),
+                r => terrain.get(r.x, r.y) / 2 + 1
+              ),
+            0
+          ) / sources.length;
       }
     }
   }
@@ -109,6 +120,9 @@ function performScouting(creep: Creep) {
     wallRatio,
     sourcesControllerAverageDistance,
     enemies: _.countBy(creep.room.find(FIND_HOSTILE_CREEPS), c => c.owner.username),
-    enemyStructures: _.countBy(creep.room.find(FIND_HOSTILE_STRUCTURES), s => s.owner?.username ?? "none")
+    enemyStructures: _.countBy(
+      creep.room.find(FIND_HOSTILE_STRUCTURES).filter(s => s.structureType !== "powerBank"),
+      s => s.owner?.username ?? "none"
+    )
   };
 }

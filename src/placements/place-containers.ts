@@ -37,11 +37,11 @@ function placeControllerContainer(room: Room): void {
     )
   )
     return;
-  const firstSortedPlace = _.min(
+  const firstSortedPlace = minBy(
     containerPlaces.filter(([p]) => p.isEmpty()),
     ([p, roads]) =>
       (p.x - controllerPos.x) * (p.x - controllerPos.x) + (p.y - controllerPos.y) * (p.y - controllerPos.y) - roads
-  );
+  ) ?? [controllerPos, 0];
   firstSortedPlace[0].createConstructionSite(STRUCTURE_CONTAINER);
 }
 

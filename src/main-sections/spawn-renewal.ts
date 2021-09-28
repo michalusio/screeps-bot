@@ -3,6 +3,16 @@ import { civilizationEnergyLevel } from "./stages";
 export function renewIfNotBusy(): void {
   for (const spawnName in Game.spawns) {
     const spawn = Game.spawns[spawnName];
+    if (!Memory.rooms[spawn.room.name]) {
+      Memory.rooms[spawn.room.name] = {
+        civilizationLevel: 0,
+        children: [],
+        mode: "Bootstrap",
+        orders: {},
+        prioritizeBuilding: true,
+        wallRepairs: false
+      };
+    }
     if (spawn.spawning) {
       continue;
     }
@@ -15,7 +25,10 @@ export function renewIfNotBusy(): void {
         spawn.recycleCreep(creep);
         break;
       }
-      if (costOf(creep) < Math.min(spawn.room.energyCapacityAvailable, civilizationEnergyLevel(spawn.room)) / 2) {
+      if (
+        costOf(creep) <
+        Math.min(spawn.room.energyCapacityAvailable, civilizationEnergyLevel(spawn.room.memory?.civilizationLevel)) / 2
+      ) {
         continue;
       }
       if ((creep.ticksToLive ?? 1000) < 1000 && (600 / creep.body.length) % 1 < 0.3 && spawn.renewCreep(creep) === OK)

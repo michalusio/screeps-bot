@@ -14,55 +14,60 @@ const emptyPriority = {
   container: 2
 };
 
-const notEmptyContainerCache: {
+type PerRoomNotEmptyContainerCache = {
   value: [(StructureContainer | StructureStorage)[], (StructureContainer | StructureStorage)[]];
   time: number;
-} = { value: [[], []], time: 0 };
+};
+
+const notEmptyContainerCache: { [room: string]: PerRoomNotEmptyContainerCache } = {};
 
 export function energyContainerNotEmpty(
   creep: Creep
 ): () => StructureContainer | StructureStorage | StructureSpawn | undefined {
   return () => {
-    if (notEmptyContainerCache.time !== Game.time) {
-      notEmptyContainerCache.value[0] = creep.room.find(FIND_STRUCTURES).filter(isEnergyStorageAnd()) as (
+    if (!notEmptyContainerCache[creep.room.name]) {
+      notEmptyContainerCache[creep.room.name] = { value: [[], []], time: 0 };
+    }
+    const notEmptyCache = notEmptyContainerCache[creep.room.name];
+    if (notEmptyCache.time !== Game.time) {
+      notEmptyCache.value[0] = creep.room.find(FIND_STRUCTURES).filter(isEnergyStorageAnd()) as (
         | StructureContainer
         | StructureStorage
       )[];
-      notEmptyContainerCache.value[1] = notEmptyContainerCache.value[0].filter(
-        s => s.store.getUsedCapacity(RESOURCE_ENERGY) > 200
-      );
-      notEmptyContainerCache.time = Game.time;
+      notEmptyCache.value[1] = notEmptyCache.value[0].filter(s => s.store.getUsedCapacity(RESOURCE_ENERGY) > 200);
+      notEmptyCache.time = Game.time;
     }
-    const filtered = notEmptyContainerCache.value[0];
-    const withEnergy = notEmptyContainerCache.value[1];
-    return (
-      _.min(withEnergy, emptyByStructureTypeThenRange(creep)) ??
-      (filtered.length === 0
-        ? _.sample(mySpawns(creep.room, 50).filter(s => s.store.getUsedCapacity(RESOURCE_ENERGY) > 200))
-        : undefined)
-    );
+    const filtered = notEmptyCache.value[0];
+    const withEnergy = notEmptyCache.value[1];
+    return minBy(withEnergy, emptyByStructureTypeThenRange(creep)) ?? filtered.length === 0
+      ? _.sample(mySpawns(creep.room, 50).filter(s => s.store.getUsedCapacity(RESOURCE_ENERGY) > 200))
+      : undefined;
   };
 }
 
-const notFullContainerCache: {
+type PerRoomNotFullContainerCache = {
   value: (StructureContainer | StructureStorage | StructureExtension | StructureSpawn)[];
   time: number;
-} = { value: [], time: 0 };
+};
+
+const notFullContainerCache: { [room: string]: PerRoomNotFullContainerCache } = {};
 
 export function energyContainerNotFull(
   creep: Creep
 ): () => StructureStorage | StructureContainer | StructureExtension | StructureSpawn | undefined {
   return () => {
-    if (notFullContainerCache.time !== Game.time) {
-      notFullContainerCache.value = _.filter<
-        StructureContainer | StructureStorage | StructureExtension | StructureSpawn
-      >(
+    if (!notFullContainerCache[creep.room.name]) {
+      notFullContainerCache[creep.room.name] = { value: [], time: 0 };
+    }
+    const notFullCache = notFullContainerCache[creep.room.name];
+    if (notFullCache.time !== Game.time) {
+      notFullCache.value = _.filter<StructureContainer | StructureStorage | StructureExtension | StructureSpawn>(
         creep.room.find(FIND_STRUCTURES),
         isEnergyContainerAnd(s => s.store.getFreeCapacity(RESOURCE_ENERGY) > 0)
       );
-      notFullContainerCache.time = Game.time;
+      notFullCache.time = Game.time;
     }
-    return _.min(notFullContainerCache.value, fillByStructureTypeThenRange(creep));
+    return minBy(notFullCache.value, fillByStructureTypeThenRange(creep));
   };
 }
 

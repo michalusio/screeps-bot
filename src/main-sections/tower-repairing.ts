@@ -52,14 +52,35 @@ export function towerRepairing(): void {
     const enemies = _.sortBy(room.find(FIND_HOSTILE_CREEPS), c => c.hits);
     towers.forEach(tower => {
       for (let i = 0; i < enemies.length; i++) {
-        if (tower.attack(enemies[i]) === OK) return;
+        if (tower.attack(enemies[i]) === OK) {
+          room.visual.text("⚔️", tower.pos.x, tower.pos.y - 1, {
+            align: "center",
+            backgroundColor: "hotpink",
+            backgroundPadding: 0.15
+          });
+          return;
+        }
       }
       for (let i = 0; i < hurtCreeps.length; i++) {
-        if (tower.heal(hurtCreeps[i]) === OK) return;
+        if (tower.heal(hurtCreeps[i]) === OK) {
+          room.visual.text("🚑", tower.pos.x, tower.pos.y - 1, {
+            align: "center",
+            backgroundColor: "hotpink",
+            backgroundPadding: 0.15
+          });
+          return;
+        }
       }
       if (tower.store.getUsedCapacity(RESOURCE_ENERGY) > 100) {
         for (let i = 0; i < toRepair.length; i++) {
-          if (tower.repair(toRepair[i]) === OK) return;
+          if (tower.repair(toRepair[i]) === OK) {
+            room.visual.text("🔧", tower.pos.x, tower.pos.y - 1, {
+              align: "center",
+              backgroundColor: "hotpink",
+              backgroundPadding: 0.15
+            });
+            return;
+          }
         }
       }
     });

@@ -80,6 +80,7 @@ declare global {
     wallRepairs: boolean;
     prioritizeBuilding: boolean;
     mode: string;
+    children: string[];
   }
 
   interface RoomPosition {
@@ -97,9 +98,15 @@ declare global {
 
   function assignRemotes(howMany: number, roomName: string): void;
   function order(roomName: string, role: string, howMany: number): void;
+  function minBy<T>(collection: T[], iteratee?: (val: T) => number): T | undefined;
 }
 
 export function injectMethods(): void {
+  global.minBy = function <T>(collection: T[], iteratee?: (val: T) => number): T | undefined {
+    const result = _.min(collection, iteratee) as T | number;
+    return result === Number.POSITIVE_INFINITY ? undefined : (result as T);
+  };
+
   String.prototype.hashCode = function (): number {
     return Array.from(this).reduce((s, c) => (Math.imul(31, s) + c.charCodeAt(0)) | 0, 0);
   };
@@ -269,7 +276,9 @@ export function injectMethods(): void {
     target: RoomPosition | _HasRoomPosition,
     avoid?: (room: Room) => RoomPosition[]
   ): () => MoveToReturnCode {
-    const avoided = avoid?.call(undefined, this.room) ?? [];
+    const targeted = target instanceof RoomPosition ? target : target.pos;
+    const addonAvoided = targeted.isBorderCell() ? [] : this.room.find(FIND_EXIT);
+    const avoided = [...(avoid?.call(undefined, this.room) ?? []), ...addonAvoided];
     const costCallback = (name: string, matrix: CostMatrix) =>
       avoided.filter(a => a.roomName === name).forEach(a => matrix.set(a.x, a.y, Number.MAX_VALUE));
     const hash = (this.roleMemory.role.hashCode() >> 8) & 0xffffff;
@@ -281,7 +290,7 @@ export function injectMethods(): void {
             heuristicWeight: 1.5,
             reusePath: 10,
             visualizePathStyle: { stroke: "#" + hash.toString(16) },
-            costCallback: avoid ? costCallback : undefined
+            costCallback
           });
   };
 
@@ -289,7 +298,9 @@ export function injectMethods(): void {
     target: RoomPosition | _HasRoomPosition,
     avoid?: (room: Room) => RoomPosition[]
   ): MoveToReturnCode {
-    const avoided = avoid?.call(undefined, this.room) ?? [];
+    const targeted = target instanceof RoomPosition ? target : target.pos;
+    const addonAvoided = targeted.isBorderCell() ? [] : this.room.find(FIND_EXIT);
+    const avoided = [...(avoid?.call(undefined, this.room) ?? []), ...addonAvoided];
     const costCallback = (name: string, matrix: CostMatrix) =>
       avoided.filter(a => a.roomName === name).forEach(a => matrix.set(a.x, a.y, Number.MAX_VALUE));
     const hash = (this.roleMemory.role.hashCode() >> 8) & 0xffffff;

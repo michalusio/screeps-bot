@@ -34,6 +34,9 @@ const body = () => {
       })
     )();
   } catch (e) {
+    if (e instanceof Error) {
+      console.log(e.stack);
+    }
     console.log(e);
   }
 };

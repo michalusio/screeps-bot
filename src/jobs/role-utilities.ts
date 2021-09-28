@@ -1,6 +1,8 @@
 import { CreepRoleMemory } from "utils/creeps/role-memory";
 
 import { builderBehavior, builderBody, builderMemory } from "./builder";
+import { claimerBehavior, claimerBody, claimerMemory } from "./claimer";
+import { conquistadoresBehavior, conquistadoresBody, conquistadoresMemory } from "./conquistadores";
 import { defenderBehavior, defenderBody, defenderMemory } from "./defender";
 import { haulerBehavior, haulerBody, haulerMemory } from "./hauler";
 import { minerBehavior, minerBody, minerMemory } from "./miner";
@@ -25,6 +27,8 @@ export const roleUtilities: Roles = {
   towerbro: [towerbroBody, towerbroMemory, towerbroBehavior],
   remoteminer: [remoteMinerBody, remoteMinerMemory, remoteMinerBehavior],
   scout: [scoutBody, scoutMemory, scoutBehavior],
+  claimer: [claimerBody, claimerMemory, claimerBehavior],
+  conquistadores: [conquistadoresBody, conquistadoresMemory, conquistadoresBehavior],
 
   sacrifice: [
     (): BodyPartConstant[] => [],

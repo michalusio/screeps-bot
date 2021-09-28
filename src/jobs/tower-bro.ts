@@ -54,7 +54,7 @@ export function towerbroBehavior(creep: Creep): void {
             (s: AnyStructure) => s.structureType === STRUCTURE_TOWER && s.store.getFreeCapacity(RESOURCE_ENERGY) > 0
           );
         const tower = getByIdOrNew(creepMemory.towerPoint, () =>
-          _.min(towers, t => t.store.getUsedCapacity(RESOURCE_ENERGY))
+          minBy(towers, t => t.store.getUsedCapacity(RESOURCE_ENERGY))
         );
         if (!tower) break;
         creepMemory.towerPoint = tower.id;

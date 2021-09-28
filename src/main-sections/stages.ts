@@ -11,9 +11,11 @@ import { CreepCounter, RoomCreepCounter } from "./creep-counting";
 
 export function wrapWithStages(loop: (creepCount: CreepCounter) => void): (creepCount: CreepCounter) => void {
   return (creepCount: CreepCounter) => {
-    if (creepCount.size === 0) {
-      Object.keys(Game.spawns).forEach(s => {
-        const spawn = Game.spawns[s];
+    Object.keys(Game.spawns).forEach(s => {
+      const spawn = Game.spawns[s];
+      const counter = creepCount.get(spawn.room.name);
+      if (!counter || counter.overall === 0) {
+        console.log(spawn.name);
         if (spawn.room.energyAvailable > 230 && !spawn.spawning) {
           if (spawn.room.find(FIND_HOSTILE_CREEPS).length > 0) {
             spawn.spawnCreepCached(defenderBody(spawn.room.energyAvailable), `defender-${Memory.creepIndex}`, {
@@ -25,18 +27,21 @@ export function wrapWithStages(loop: (creepCount: CreepCounter) => void): (creep
             });
           }
         }
-      });
-    }
+      }
+    });
     creepCount.forEach((roomCounter, roomName) => {
       const room = Game.rooms[roomName];
 
-      if (mySpawns(room, 50).length === 0) return;
+      if (!mySpawns(room, 50).length) return;
 
       if (!room.memory.mode) {
         room.memory.mode = Bootstrap.name;
       }
       if (!room.memory.wallRepairs) {
         room.memory.wallRepairs = false;
+      }
+      if (!room.memory.children) {
+        room.memory.children = [];
       }
       if (!room.memory.orders) {
         room.memory.orders = {};
@@ -50,6 +55,7 @@ export function wrapWithStages(loop: (creepCount: CreepCounter) => void): (creep
       if (mode.canLeave(room) && stageIndex === stages.length - 1) {
         const openModes = Object.keys(modes)
           .map(m => modes[m])
+          .filter(m => m.name !== mode.name)
           .filter(mode => mode.canEnter(room));
         if (openModes.length === 0) {
           log(`Room ${room.name} cannot find an open mode to change to`);
@@ -70,14 +76,15 @@ export function wrapWithStages(loop: (creepCount: CreepCounter) => void): (creep
       const [nextRequirements, placementsToPlace] = getNextStageDelta(stageIndex, room, stages, roomCounter);
 
       if (placementsToPlace.length > 0 && room.find(FIND_MY_CONSTRUCTION_SITES).length === 0) {
-        _.first(placementsToPlace).place(room);
+        placementsToPlace[0].place(room);
       }
 
       mySpawns(room, 50)
         .filter(
           spawn =>
             !spawn.spawning &&
-            spawn.room.energyAvailable >= Math.min(spawn.room.energyCapacityAvailable, civilizationEnergyLevel(room))
+            spawn.room.energyAvailable >=
+              Math.min(spawn.room.energyCapacityAvailable, civilizationEnergyLevel(room.memory?.civilizationLevel))
         )
         .forEach(spawn => spawnRequirement(spawn, nextRequirements));
       //*/
@@ -87,8 +94,8 @@ export function wrapWithStages(loop: (creepCount: CreepCounter) => void): (creep
   };
 }
 
-export function civilizationEnergyLevel(room: Room): number {
-  return Math.max(150, 150 + Math.floor((room.memory.civilizationLevel ?? 0) * 50));
+export function civilizationEnergyLevel(civilizationLevel: number | undefined): number {
+  return Math.max(150, 150 + Math.floor((civilizationLevel ?? 0) * 50));
 }
 
 function spawnRequirement(spawn: StructureSpawn, requirements: RoleRequirements): void {

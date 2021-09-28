@@ -43,7 +43,7 @@ export function wrapWithCount(loop: (creepCount: CreepCounter) => void): () => v
         creepCount.set(creepRoom, roomCount);
       }
       roomCount.overall++;
-      if (memory.role && (creep.ticksToLive ?? 600) > 100) {
+      if (memory.role && ((creep.ticksToLive ?? 600) > 100 || memory.role === "claimer")) {
         roomCount.perRole[memory.role] = (roomCount.perRole[memory.role] ?? 0) + 1;
       }
     });

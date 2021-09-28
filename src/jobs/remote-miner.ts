@@ -32,12 +32,12 @@ export function remoteMinerBehavior(creep: Creep): void {
   const remoteMiner = creep as RemoteMiner;
   const creepMemory = remoteMiner.memory;
   if (creepMemory.sourceRoom === undefined) {
-    creepMemory.sourceRoom = _.min(
+    creepMemory.sourceRoom = minBy(
       [
-        remoteMiner.room.getRoomNameOnSide(FIND_EXIT_TOP),
-        remoteMiner.room.getRoomNameOnSide(FIND_EXIT_BOTTOM),
-        remoteMiner.room.getRoomNameOnSide(FIND_EXIT_LEFT),
-        remoteMiner.room.getRoomNameOnSide(FIND_EXIT_RIGHT)
+        Game.rooms[creepMemory.originRoom].getRoomNameOnSide(FIND_EXIT_TOP),
+        Game.rooms[creepMemory.originRoom].getRoomNameOnSide(FIND_EXIT_BOTTOM),
+        Game.rooms[creepMemory.originRoom].getRoomNameOnSide(FIND_EXIT_LEFT),
+        Game.rooms[creepMemory.originRoom].getRoomNameOnSide(FIND_EXIT_RIGHT)
       ].filter(name => !Memory.noRemoteMining.includes(name)),
       r =>
         Object.keys(Game.creeps)
@@ -58,10 +58,19 @@ export function remoteMinerBehavior(creep: Creep): void {
           break;
         }
         if (creep.room.name === creepMemory.sourceRoom) {
-          const source = _.min(remoteMiner.room.find(FIND_SOURCES_ACTIVE), s => s.pos.getRangeTo(remoteMiner));
+          const spawns = creep.room.find(FIND_MY_SPAWNS).length;
+          if (spawns > 0) {
+            if (!Memory.noRemoteMining.includes(creep.room.name)) {
+              Memory.noRemoteMining.push(creep.room.name);
+            }
+            creepMemory.sourceRoom = undefined;
+          }
+          const source = minBy(remoteMiner.room.find(FIND_SOURCES_ACTIVE), s => s.pos.getRangeTo(remoteMiner));
           if (!source) {
-            const newSource = _.min(remoteMiner.room.find(FIND_SOURCES), s => s.ticksToRegeneration);
-            remoteMiner.travelTo(newSource)();
+            const newSource = minBy(remoteMiner.room.find(FIND_SOURCES), s => s.ticksToRegeneration);
+            if (newSource) {
+              remoteMiner.travelTo(newSource)();
+            }
           } else if (
             tryDoOrMove(() => remoteMiner.harvest(source), remoteMiner.travelTo(source)) === ERR_NOT_ENOUGH_RESOURCES
           ) {
