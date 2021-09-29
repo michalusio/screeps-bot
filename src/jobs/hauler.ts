@@ -1,3 +1,4 @@
+import { sources } from "cache/source-cache";
 import { energyContainerNotFull, fillBody, getByIdOrNew, tryDoOrMove } from "utils/creeps";
 
 import { CreepRoleMemory, stateChanger } from "../utils/creeps/role-memory";
@@ -29,7 +30,7 @@ export const haulerMemory: HaulerMemory = {
 
 const resourceCache: { [room: string]: [Resource<ResourceConstant>[], number] } = {};
 
-const avoidSources = (room: Room): RoomPosition[] => room.find(FIND_SOURCES).flatMap(s => s.pos.getAround(1));
+const avoidSources = (room: Room): RoomPosition[] => sources(room, 1000).flatMap(s => s.pos.getAround(1));
 const findNewResource = (hauler: Hauler) => () => {
   resourceCache[hauler.room.name] =
     (resourceCache[hauler.room.name] ?? [[], 0])[1] === Game.time
@@ -63,12 +64,15 @@ export function haulerBehavior(creep: Creep): void {
         const resource = getByIdOrNew(creepMemory.energyPoint, findNewResource(hauler));
         if (resource) {
           creepMemory.energyPoint = resource.id;
-          tryDoOrMove(() => hauler.pickup(resource), hauler.travelTo(resource, avoidSources));
+          tryDoOrMove(() => hauler.pickup(resource), hauler.travelTo(resource, avoidSources, { ignoreCreeps: true }));
         } else {
           const tombstone = getByIdOrNew(creepMemory.tombPoint, findTombstoneResource(hauler));
           if (tombstone) {
             creepMemory.tombPoint = tombstone.id;
-            tryDoOrMove(() => hauler.withdraw(tombstone, RESOURCE_ENERGY), hauler.travelTo(tombstone, avoidSources));
+            tryDoOrMove(
+              () => hauler.withdraw(tombstone, RESOURCE_ENERGY),
+              hauler.travelTo(tombstone, avoidSources, { ignoreCreeps: true })
+            );
           }
         }
         if (hauler.store.getUsedCapacity(RESOURCE_ENERGY) >= hauler.store.getCapacity()) {
@@ -88,9 +92,9 @@ export function haulerBehavior(creep: Creep): void {
         creepMemory.storagePoint = storage.id;
         const transferCode = tryDoOrMove(
           () => hauler.transfer(storage, RESOURCE_ENERGY),
-          hauler.travelTo(storage, avoidSources)
+          hauler.travelTo(storage, avoidSources, { ignoreCreeps: true })
         );
-        if (transferCode === ERR_FULL) {
+        if (transferCode === ERR_FULL || storage.store.getFreeCapacity(RESOURCE_ENERGY) === 0) {
           changeState("storing", hauler);
         } else if (hauler.store.getUsedCapacity(RESOURCE_ENERGY) <= 1) {
           changeState("getting", hauler);

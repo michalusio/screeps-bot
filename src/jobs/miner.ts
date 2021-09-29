@@ -1,3 +1,4 @@
+import { sources } from "cache/source-cache";
 import { fillBody, getByIdOrNew, tryDoOrMove } from "utils/creeps";
 
 import { CreepRoleMemory } from "../utils/creeps/role-memory";
@@ -14,7 +15,7 @@ export interface MinerMemory extends CreepRoleMemory {
   state: "mining";
 }
 
-export const minerBody = fillBody.bind(undefined, 10, [MOVE, WORK, WORK, WORK, WORK]);
+export const minerBody = fillBody.bind(undefined, 8, [MOVE, WORK, WORK, WORK]);
 
 export const minerMemory: MinerMemory = {
   newCreep: true,
@@ -29,20 +30,19 @@ export function minerBehavior(creep: Creep): void {
   switch (creepMemory.state) {
     case "mining":
       {
-        const source = getByIdOrNew(creepMemory.sourcePoint, () =>
-          _.sample(miner.room.find(FIND_SOURCES_ACTIVE).filter(s => s.pos.getFreeSpaceAround() > 0))
+        const source = getByIdOrNew(
+          creepMemory.sourcePoint,
+          () =>
+            sources(creep.room, 1000).filter(s =>
+              _.every(Game.creeps, c => c.roleMemory.role !== "miner" || (c.memory as MinerMemory).sourcePoint !== s.id)
+            )[0]
         );
-        if (!source || source.energy === 0 || (!source.pos.isNearTo(miner) && source.pos.getFreeSpaceAround() > 0)) {
-          const newSource = minBy(miner.room.find(FIND_SOURCES), s => s.ticksToRegeneration);
-          if (newSource) {
-            creepMemory.sourcePoint = undefined;
-            miner.travelTo(newSource)();
+        if (!source) {
+          if (Game.time % 3 === 0) {
+            creep.wander();
           }
+          break;
         } else {
-          if (source.pos.getRangeTo(miner.pos) > 1.8 && source.pos.getFreeSpaceAround() === 0) {
-            creepMemory.sourcePoint = undefined;
-            break;
-          }
           creepMemory.sourcePoint = source.id;
           tryDoOrMove(() => miner.harvest(source), miner.travelTo(source));
         }

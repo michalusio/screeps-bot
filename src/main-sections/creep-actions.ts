@@ -3,6 +3,7 @@ import { CreepRoleMemory } from "utils/creeps";
 import { log } from "utils/log";
 
 export function creepActions(): void {
+  //
   const [creepsWithBehavior, creepsWithNoBehavior] = _.partition(
     _.map(Game.creeps, creep => [creep, creep.roleMemory] as [Creep, CreepRoleMemory]),
     ([, memory]) => memory.role && roleUtilities[memory.role]
@@ -29,4 +30,5 @@ export function creepActions(): void {
         } else console.log(e);
       }
     });
+  //*/
 }

@@ -14,7 +14,7 @@ const extensionsToRcl = {
   [60]: 8
 };
 
-const rangeSize = 5;
+const rangeSize = 6;
 
 export const extensionPlacer: (n: 5 | 10 | 20 | 30 | 40 | 50 | 60) => Placement = (
   n: 5 | 10 | 20 | 30 | 40 | 50 | 60
@@ -29,21 +29,19 @@ export const extensionPlacer: (n: 5 | 10 | 20 | 30 | 40 | 50 | 60) => Placement 
       n -
       room.find(FIND_MY_STRUCTURES).filter(s => s.structureType === "extension").length -
       room.find(FIND_MY_CONSTRUCTION_SITES).filter(s => s.structureType === "extension").length;
-    if (toTake > 0) {
-      const positions: { pos: RoomPosition; dist: number }[] = mySpawns(room, 50)
-        .flatMap(s => toRoomPositionsWithDist(checkerBoard(deltaAround(rangeSize, 1), false), s.pos))
-        .filter(a => a.pos.isEmpty());
-      positions.forEach(a => room.visual.circle(a.pos.x, a.pos.y, { stroke: "red" }));
 
+    const positions: { pos: RoomPosition; dist: number }[] = mySpawns(room, 50)
+      .flatMap(s => toRoomPositionsWithDist(checkerBoard(deltaAround(rangeSize, 1), false), s.pos))
+      .filter(a => a.pos.isEmpty() && a.pos.canBuild());
+
+    if (toTake > 0) {
       log(`Placing ${toTake} extensions`);
       _.take(
         _.sortBy(positions, p => p.dist),
         toTake
       )
         .map(p => p.pos)
-        .forEach(p => {
-          p.createConstructionSite(STRUCTURE_EXTENSION);
-        });
+        .forEach(p => p.createConstructionSite(STRUCTURE_EXTENSION));
     }
   }
 });

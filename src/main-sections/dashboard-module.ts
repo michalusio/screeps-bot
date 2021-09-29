@@ -1,3 +1,4 @@
+import { getAllure, placeInitialSpawn } from "jobs/claimer";
 import { messages, pruneLogs } from "../utils/log";
 import { CreepCounter } from "./creep-counting";
 import { civilizationEnergyLevel } from "./stages";
@@ -6,6 +7,8 @@ export function logging(creepCount: CreepCounter): void {
   pruneLogs();
 
   showScoutVisuals();
+
+  showSpawnVisuals();
 
   if (Memory.cpu.length > 9) Memory.cpu.splice(0, Memory.cpu.length - 9);
   Memory.cpu.push(Game.cpu.getUsed());
@@ -320,17 +323,21 @@ function showScoutVisuals() {
         fill: "#00ff00",
         opacity: 1
       });
-      const allure =
-        averageDistance * 0.5 +
-        Math.min(10, _.sum(data.enemies)) * -0.1 +
-        data.sources * 0.2 +
-        data.swampRatio * -0.1 +
-        Math.abs(data.wallRatio - 0.3) * -0.1;
+      const allure = getAllure(averageDistance, data);
       const allureHeight = Math.round(20 * Math.min(1, Math.max(0, allure)) + 1);
       Game.map.visual.rect(new RoomPosition(42, 50 - allureHeight, roomName), 4, allureHeight, {
         fill: "#ffffff",
         opacity: 1
       });
+    }
+  });
+}
+function showSpawnVisuals() {
+  if (!Memory.spawnVisualizer) return;
+  Memory.spawnVisualizer.forEach(room => {
+    const place = placeInitialSpawn(Game.rooms[room]);
+    if (place) {
+      Game.rooms[room].visual.circle(place.x, place.y, { opacity: 1, fill: "blue" });
     }
   });
 }

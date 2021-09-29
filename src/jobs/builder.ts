@@ -1,4 +1,4 @@
-import { structuresToRepair } from "cache/structure-cache";
+import { constructionSites, structuresToRepair } from "cache/structure-cache";
 import { energyContainerNotEmpty, fillBody, getByIdOrNew, tryDoOrMove } from "utils/creeps";
 
 import { CreepRoleMemory, stateChanger } from "../utils/creeps/role-memory";
@@ -33,7 +33,7 @@ export function builderBehavior(creep: Creep): void {
   const builder = creep as Builder;
   const creepMemory = builder.memory;
 
-  if (builder.room.find(FIND_MY_CONSTRUCTION_SITES).length === 0) {
+  if (constructionSites(builder.room, 50).length === 0) {
     beginSacrifice(builder);
     return;
   }
@@ -69,7 +69,7 @@ export function builderBehavior(creep: Creep): void {
       {
         const site = getByIdOrNew(creepMemory.buildPoint, () =>
           minBy(
-            builder.room.find(FIND_CONSTRUCTION_SITES),
+            constructionSites(builder.room, 50),
             s => s.progressTotal - s.progress + s.pos.getRangeTo(builder) * 100
           )
         );
@@ -107,7 +107,7 @@ const changeState = stateChanger<BuilderMemory>("buildPoint", "repairPoint", "so
 function changeStateIfFull(builder: Builder, creepMemory: BuilderMemory) {
   if (builder.store.getUsedCapacity(RESOURCE_ENERGY) >= builder.store.getCapacity()) {
     if (builder.room.memory.prioritizeBuilding) {
-      if (builder.room.find(FIND_MY_CONSTRUCTION_SITES).length === 0) {
+      if (constructionSites(builder.room, 50).length === 0) {
         if (creepMemory.repairPoint || structuresToRepair(builder.room, 2).length > 0) {
           changeState("repairing", builder);
         } else if (Game.time % 3 === 0) builder.wander();
@@ -118,7 +118,7 @@ function changeStateIfFull(builder: Builder, creepMemory: BuilderMemory) {
       if (creepMemory.repairPoint || structuresToRepair(builder.room, 2).length > 0) {
         changeState("repairing", builder);
       } else {
-        if (builder.room.find(FIND_MY_CONSTRUCTION_SITES).length === 0) {
+        if (constructionSites(builder.room, 50).length === 0) {
           changeState("building", builder);
         } else if (Game.time % 3 === 0) builder.wander();
       }

@@ -63,7 +63,7 @@ function stateVisualizer(state: string, creep: Creep) {
     default:
       creep.room.visual.text(state, creep.pos.x, creep.pos.y - 1, {
         align: "center",
-        backgroundColor: "hotpink",
+        backgroundColor: "#CCCCCC",
         backgroundPadding: 0.15
       });
       break;

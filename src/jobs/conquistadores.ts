@@ -1,3 +1,5 @@
+import { activeSources } from "cache/source-cache";
+import { constructionSites, mySpawns } from "cache/structure-cache";
 import { energyContainerNotEmpty, fillBody, getByIdOrNew, tryDoOrMove } from "utils/creeps";
 import { log } from "utils/log";
 
@@ -46,7 +48,7 @@ export function conquistadoresBehavior(creep: Creep): void {
   if (creepMemory.targetRoom === "") {
     const roomsToBuild = Memory.rooms[creepMemory.originRoom].children
       .map(c => Game.rooms[c])
-      .filter(r => (r.controller?.my ?? false) && r.controller?.progress === 0 && r.find(FIND_MY_SPAWNS).length === 0);
+      .filter(r => (r.controller?.my ?? false) && r.controller?.progress === 0 && mySpawns(r, 50).length === 0);
     creepMemory.targetRoom = _.first(roomsToBuild).name;
   }
   switch (creepMemory.state) {
@@ -76,9 +78,7 @@ export function conquistadoresBehavior(creep: Creep): void {
           break;
         }
         if (creep.room.name === creepMemory.targetRoom) {
-          const site = minBy(conquistadores.room.find(FIND_MY_CONSTRUCTION_SITES), s =>
-            s.pos.getRangeTo(conquistadores)
-          );
+          const site = minBy(constructionSites(conquistadores.room, 50), s => s.pos.getRangeTo(conquistadores));
           if (!site) {
             creepMemory.targetRoom = "";
             break;
@@ -104,7 +104,7 @@ export function conquistadoresBehavior(creep: Creep): void {
 
     case "mining":
       {
-        const source = minBy(conquistadores.room.find(FIND_SOURCES_ACTIVE), s => s.pos.getRangeTo(conquistadores));
+        const source = minBy(activeSources(conquistadores.room, 50), s => s.pos.getRangeTo(conquistadores));
         if (
           source &&
           (conquistadores.store.getFreeCapacity() === 0 ||
@@ -120,16 +120,16 @@ export function conquistadoresBehavior(creep: Creep): void {
         if (conquistadores.room.name === creepMemory.originRoom) {
           const storage = getByIdOrNew(creepMemory.sourcePoint, energyContainerNotEmpty(conquistadores));
           if (!storage) break;
-          if (!storage.store || storage.store.getFreeCapacity(RESOURCE_ENERGY) === 0) {
+          if (!storage.store || storage.store.getUsedCapacity(RESOURCE_ENERGY) === 0) {
             changeState("sourcing", conquistadores);
             break;
           }
           creepMemory.sourcePoint = storage.id;
-          const transferCode = tryDoOrMove(
-            () => conquistadores.withdraw(storage, RESOURCE_ENERGY),
-            conquistadores.travelTo(storage)
-          );
-          if (transferCode === ERR_FULL) {
+          if (
+            conquistadores.store.getFreeCapacity() === 0 ||
+            tryDoOrMove(() => conquistadores.withdraw(storage, RESOURCE_ENERGY), conquistadores.travelTo(storage)) ===
+              ERR_FULL
+          ) {
             changeState("conquering", conquistadores);
           } else if (conquistadores.store.getUsedCapacity(RESOURCE_ENERGY) <= 1) {
             changeState("sourcing", conquistadores);

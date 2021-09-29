@@ -1,3 +1,4 @@
+import { sources } from "cache/source-cache";
 import { CreepRemoteMemory } from "../utils/creeps/role-memory";
 
 export interface Scout extends Creep {
@@ -87,13 +88,13 @@ function performScouting(creep: Creep) {
       swampRatio = swampRatio / (50 * 50);
       wallRatio = wallRatio / (50 * 50);
 
-      const sources = creep.room.find(FIND_SOURCES).map(s => s.pos);
+      const sourcesPos = sources(creep.room, 1000).map(s => s.pos);
       const controller = creep.room.controller;
-      if (!controller || sources.length === 0) {
+      if (!controller || sourcesPos.length === 0) {
         sourcesControllerAverageDistance = 100;
       } else {
         sourcesControllerAverageDistance =
-          sources.reduce(
+          sourcesPos.reduce(
             (acc, s) =>
               acc +
               _.sum(
@@ -105,7 +106,7 @@ function performScouting(creep: Creep) {
                 r => terrain.get(r.x, r.y) / 2 + 1
               ),
             0
-          ) / sources.length;
+          ) / sourcesPos.length;
       }
     }
   }
@@ -114,7 +115,7 @@ function performScouting(creep: Creep) {
     roomName: creep.room.name,
     tick: Game.time,
     controllerLvl: creep.room.controller?.level ?? null,
-    sources: creep.room.find(FIND_SOURCES).length,
+    sources: sources(creep.room, 1000).length,
     spawn: creep.room.find(FIND_CONSTRUCTION_SITES).filter(s => s.structureType === "spawn").length > 0,
     swampRatio,
     wallRatio,

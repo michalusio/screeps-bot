@@ -1,4 +1,7 @@
+import { getPathFromCache } from "cache/path-cache";
+import { sources } from "cache/source-cache";
 import { CreepRemoteMemory, tryDoOrMove } from "utils/creeps";
+import { ScoutData } from "utils/declarations";
 import { log } from "utils/log";
 
 export interface Claimer extends Creep {
@@ -41,7 +44,8 @@ export function claimerBehavior(creep: Creep): void {
           if (controller.my) {
             const children = Memory.rooms[creepMemory.originRoom].children;
             if (!children.includes(claimer.room.name)) {
-              if (placeInitialSpawn(claimer.room)) {
+              const place = placeInitialSpawn(claimer.room);
+              if (place?.createConstructionSite(STRUCTURE_SPAWN) === OK) {
                 children.push(claimer.room.name);
               }
             }
@@ -98,12 +102,7 @@ function getRoomToClaim(originRoom: string): string {
         data => {
           const averageDistance = (max - data.sourcesControllerAverageDistance) / (max - min);
           const allure =
-            averageDistance * 0.5 +
-            Math.min(10, _.sum(data.enemies)) * -0.1 +
-            data.sources * 0.2 +
-            data.swampRatio * -0.1 +
-            Math.abs(data.wallRatio - 0.3) * -0.1 +
-            Game.map.getRoomLinearDistance(originRoom, data.roomName) * -0.1;
+            getAllure(averageDistance, data) + Game.map.getRoomLinearDistance(originRoom, data.roomName) * -0.1;
           return [data.roomName, allure] as [string, number];
         }
       ),
@@ -115,59 +114,82 @@ function getRoomToClaim(originRoom: string): string {
   } else return "";
 }
 
-function placeInitialSpawn(room: Room) {
+export function getAllure(averageDistance: number, data: ScoutData): number {
+  const adjacentRooms = [
+    getRoomNameOnSide(data.roomName, FIND_EXIT_TOP),
+    getRoomNameOnSide(data.roomName, FIND_EXIT_BOTTOM),
+    getRoomNameOnSide(data.roomName, FIND_EXIT_LEFT),
+    getRoomNameOnSide(data.roomName, FIND_EXIT_RIGHT)
+  ].filter(r => r != null);
+  const howManyAreMine = _.filter(
+    adjacentRooms,
+    r => Memory.rooms[r] && Object.keys(Memory.rooms[r]).length > 0
+  ).length;
+  return (
+    averageDistance * 0.5 +
+    Math.min(10, _.sum(data.enemies)) * -0.1 +
+    data.sources * 0.2 +
+    data.swampRatio * -0.1 +
+    Math.abs(data.wallRatio - 0.15) * -0.7 +
+    howManyAreMine * 0.2
+  );
+}
+
+const perRoomSubs: Map<string, { [pos: number]: number }> = new Map();
+
+export function placeInitialSpawn(room: Room): RoomPosition | null {
   const terrain = room.getTerrain();
-  const subs: { [pos: string]: number } = {};
-  for (let x = 0; x < 50; x++) {
-    for (let y = 0; y < 50; y++) {
-      const cell = terrain.get(x, y);
-      if (cell === TERRAIN_MASK_WALL || x === 0 || y === 0 || x === 49 || y === 49) {
-        subs[`${x} ${y}`] = 0;
-      } else {
-        let xSub = 0;
-        if (x !== 0) {
-          xSub = subs[`${x - 1} ${y}`] || 0;
+  let subs: { [pos: number]: number } = {};
+  if (perRoomSubs.has(room.name)) {
+    subs = perRoomSubs.get(room.name) || {};
+  } else {
+    for (let x = 0; x < 50; x++) {
+      for (let y = 0; y < 50; y++) {
+        const cell = terrain.get(x, y);
+        const index = x * 50 + y;
+        if (cell === TERRAIN_MASK_WALL || x === 0 || y === 0 || x === 49 || y === 49) {
+          subs[index] = 0;
+        } else {
+          let xSub = 0;
+          if (x !== 0) {
+            xSub = subs[index - 50] || 0;
+          }
+          let ySub = 0;
+          if (y !== 0) {
+            ySub = subs[index - 1] || 0;
+          }
+          let minSub = 0;
+          if (x !== 0 && y !== 0) {
+            minSub = subs[index - 51] || 0;
+          }
+          subs[index] = Math.min(xSub, ySub, minSub) + 1;
         }
-        let ySub = 0;
-        if (y !== 0) {
-          ySub = subs[`${x} ${y - 1}`] || 0;
-        }
-        let minSub = 0;
-        if (x !== 0 && y !== 0) {
-          minSub = subs[`${x - 1} ${y - 1}`] || 0;
-        }
-        subs[`${x} ${y}`] = Math.min(xSub, ySub, minSub) + 1;
-      }
-      const value = subs[`${x} ${y}`] || 0;
-      if (value > 5) {
-        room.visual.text(value.toString(), x - 2, y - 2);
       }
     }
+    perRoomSubs.set(room.name, subs);
   }
-  const stuff = [...room.find(FIND_SOURCES), ...(room.controller ? [room.controller] : [])];
-  const points = _.map(
-    _.filter(
-      _.map(subs, (v, pos) => [pos, v] as [string, number]),
-      s => s[1] > 5
-    ),
-    s => s[0]
-  ).map(pos => pos.split(" ").map(v => parseInt(v)) as [number, number]);
-  const spawnPoint = _.first(
-    _.sortBy(points, p =>
-      stuff.reduce(
-        (acc, s) => acc + room.findPath(s.pos, new RoomPosition(p[0] - 2, p[1] - 2, room.name)).length,
-        Math.abs(p[0] - 25) + Math.abs(p[1] - 25)
-      )
+  _.forEach(subs, (value, index) => {
+    if (value > 5) {
+      const iIndex = index as unknown as number;
+      const x = Math.floor(iIndex / 50);
+      const y = iIndex % 50;
+      room.visual.text(value.toString(), x, y);
+    }
+  });
+  const stuff = [...sources(room, 1000), ...(room.controller ? [room.controller] : [])];
+  const points = _.filter(
+    _.map(subs, (v, pos) => [pos, v] as unknown as [number, number]),
+    s => s[1] > 5
+  ).map(pos => [Math.floor(pos[0] / 50), pos[0] % 50, Math.floor(pos[1] / 2)] as [number, number, number]);
+  const spawnPoint = minBy(points, p =>
+    stuff.reduce(
+      (acc, s) => acc + getPathFromCache(s.pos, new RoomPosition(p[0] - p[2], p[1] - p[2], room.name), room).length,
+      Math.abs(p[0] - 25) + Math.abs(p[1] - 25) - p[2] * 5
     )
   );
   if (spawnPoint) {
-    if (
-      (room.getPositionAt(spawnPoint[0] - 2, spawnPoint[1] - 2)?.createConstructionSite(STRUCTURE_SPAWN) ??
-        ERR_INVALID_ARGS) === OK
-    ) {
-      return true;
-    }
+    return room.getPositionAt(spawnPoint[0] - spawnPoint[2], spawnPoint[1] - spawnPoint[2]);
   }
   console.log(`Cannot find good spawn point for room ${room.name}`);
-  return false;
+  return null;
 }

@@ -10,13 +10,13 @@ export const spawnPlaza: Placement = {
     const positions = mySpawns(room, 50).flatMap(s =>
       toRoomPositions(checkerBoard(deltaAround(rangeSize, 1), true), s.pos)
     );
-    return positions.every(pos => !pos.isEmpty());
+    return positions.every(pos => !pos.isEmpty() || !pos.canBuild());
   },
   place: (room: Room) => {
     const positions = mySpawns(room, 50).flatMap(s =>
       toRoomPositions(checkerBoard(deltaAround(rangeSize, 1), true), s.pos)
     );
 
-    positions.filter(pos => pos.isEmpty()).forEach(p => p.createConstructionSite(STRUCTURE_ROAD));
+    positions.filter(pos => pos.isEmpty() && pos.canBuild()).forEach(p => p.createConstructionSite(STRUCTURE_ROAD));
   }
 };

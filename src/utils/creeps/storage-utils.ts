@@ -1,4 +1,4 @@
-import { mySpawns } from "cache/structure-cache";
+import { freeEnergyContainers, mySpawns, nonEmptyEnergyContainers } from "cache/structure-cache";
 
 const fillPriority = {
   spawn: 1,
@@ -30,18 +30,18 @@ export function energyContainerNotEmpty(
     }
     const notEmptyCache = notEmptyContainerCache[creep.room.name];
     if (notEmptyCache.time !== Game.time) {
-      notEmptyCache.value[0] = creep.room.find(FIND_STRUCTURES).filter(isEnergyStorageAnd()) as (
-        | StructureContainer
-        | StructureStorage
-      )[];
+      notEmptyCache.value[0] = nonEmptyEnergyContainers(creep.room, 0);
       notEmptyCache.value[1] = notEmptyCache.value[0].filter(s => s.store.getUsedCapacity(RESOURCE_ENERGY) > 200);
       notEmptyCache.time = Game.time;
     }
     const filtered = notEmptyCache.value[0];
     const withEnergy = notEmptyCache.value[1];
-    return minBy(withEnergy, emptyByStructureTypeThenRange(creep)) ?? filtered.length === 0
-      ? _.sample(mySpawns(creep.room, 50).filter(s => s.store.getUsedCapacity(RESOURCE_ENERGY) > 200))
-      : undefined;
+    return (
+      minBy(withEnergy, emptyByStructureTypeThenRange(creep)) ??
+      (filtered.length === 0
+        ? _.sample(mySpawns(creep.room, 50).filter(s => s.store.getUsedCapacity(RESOURCE_ENERGY) > 200))
+        : undefined)
+    );
   };
 }
 
@@ -61,10 +61,7 @@ export function energyContainerNotFull(
     }
     const notFullCache = notFullContainerCache[creep.room.name];
     if (notFullCache.time !== Game.time) {
-      notFullCache.value = _.filter<StructureContainer | StructureStorage | StructureExtension | StructureSpawn>(
-        creep.room.find(FIND_STRUCTURES),
-        isEnergyContainerAnd(s => s.store.getFreeCapacity(RESOURCE_ENERGY) > 0)
-      );
+      notFullCache.value = freeEnergyContainers(creep.room, 0);
       notFullCache.time = Game.time;
     }
     return minBy(notFullCache.value, fillByStructureTypeThenRange(creep));
@@ -81,20 +78,4 @@ function emptyByStructureTypeThenRange(
   creep: Creep
 ): (s: StructureContainer | StructureStorage | StructureExtension | StructureSpawn) => number {
   return s => emptyPriority[s.structureType] * 10000 + s.pos.getRangeTo(creep.pos);
-}
-
-function isEnergyContainerAnd(
-  predicate: (s: StructureContainer | StructureExtension | StructureStorage | StructureSpawn) => boolean
-): (s: AnyStructure) => boolean {
-  return (s: AnyStructure) =>
-    (((s.structureType === "extension" || s.structureType === "spawn" || s.structureType === "storage") && s.my) ||
-      s.structureType === "container") &&
-    predicate(s);
-}
-
-function isEnergyStorageAnd(
-  predicate?: (s: StructureStorage | StructureContainer) => boolean
-): (s: AnyStructure) => boolean {
-  return (s: AnyStructure) =>
-    ((s.structureType === "storage" && s.my) || s.structureType === "container") && (predicate ? predicate(s) : true);
 }

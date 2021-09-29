@@ -1,3 +1,4 @@
+import { exits } from "cache/path-cache";
 import { extensionsToSpawnFrom } from "cache/structure-cache";
 import { RemoteMinerMemory } from "jobs/remote-miner";
 import { MoveToReturnCode } from "./creeps";
@@ -26,6 +27,11 @@ export interface ScoutData {
   wallRatio: number;
 }
 
+function splitRoomName(name: string): [string, string, string, string] {
+  const split = /([WE])(\d+)([NS])(\d+)/.exec(name);
+  return split ? [split[1], split[2], split[3], split[4]] : ["W", "0", "N", "0"];
+}
+
 declare global {
   interface String {
     hashCode(): number;
@@ -36,13 +42,23 @@ declare global {
     cpu: number[];
     visuals: boolean;
     scoutData: { [key: string]: ScoutData };
+    afterReset: boolean;
+    spawnVisualizer: string[];
   }
 
   interface Creep {
     roleMemory: CreepRoleMemory;
     wander(): CreepMoveReturnCode;
-    travelTo(target: RoomPosition | _HasRoomPosition, avoid?: (room: Room) => RoomPosition[]): () => MoveToReturnCode;
-    travelInto(target: RoomPosition | _HasRoomPosition, avoid?: (room: Room) => RoomPosition[]): MoveToReturnCode;
+    travelTo(
+      target: RoomPosition | _HasRoomPosition,
+      avoid?: (room: Room) => RoomPosition[],
+      options?: MoveToOpts | undefined
+    ): () => MoveToReturnCode;
+    travelInto(
+      target: RoomPosition | _HasRoomPosition,
+      avoid?: (room: Room) => RoomPosition[],
+      options?: MoveToOpts | undefined
+    ): MoveToReturnCode;
   }
 
   interface StructureSpawn {
@@ -85,11 +101,16 @@ declare global {
 
   interface RoomPosition {
     getFreeSpaceAround(): number;
+    getEmptyAround(): RoomPosition[];
     getAround(range: number): RoomPosition[];
     getDirected(dir: DirectionConstant): RoomPosition;
     isBorderCell(): boolean;
+    canBuild(): boolean;
     isEmpty(): boolean;
     hasRoad(): boolean;
+    _isEmpty?: boolean;
+    _hasRoad?: boolean;
+    _tick?: number;
   }
 
   interface Room {
@@ -99,12 +120,19 @@ declare global {
   function assignRemotes(howMany: number, roomName: string): void;
   function order(roomName: string, role: string, howMany: number): void;
   function minBy<T>(collection: T[], iteratee?: (val: T) => number): T | undefined;
+  function getRoomNameOnSide(name: string, side: ExitConstant): string;
+  function showSpawnFor(room: string): void;
 }
 
 export function injectMethods(): void {
   global.minBy = function <T>(collection: T[], iteratee?: (val: T) => number): T | undefined {
     const result = _.min(collection, iteratee) as T | number;
     return result === Number.POSITIVE_INFINITY ? undefined : (result as T);
+  };
+
+  global.showSpawnFor = function (room: string): void {
+    if (!Memory.spawnVisualizer) Memory.spawnVisualizer = [];
+    Memory.spawnVisualizer.push(room);
   };
 
   String.prototype.hashCode = function (): number {
@@ -126,6 +154,54 @@ export function injectMethods(): void {
     const room = new Room(roomName);
     room.memory.orders = room.memory.orders || {};
     room.memory.orders[role] = (room.memory.orders[role] || 0) + howMany;
+  };
+
+  global.getRoomNameOnSide = function (name: string, side: ExitConstant): string {
+    const parts = splitRoomName(name);
+    const we = parts[0] + parts[1];
+    const ns = parts[2] + parts[3];
+    switch (side) {
+      case 1:
+        if (parts[2] === "S") {
+          if (parts[3] === "0") {
+            return we + "N0";
+          } else {
+            return we + "S" + (parseInt(parts[3]) - 1).toString();
+          }
+        } else {
+          return we + "N" + (parseInt(parts[3]) + 1).toString();
+        }
+      case 3:
+        if (parts[0] === "W") {
+          if (parts[1] === "0") {
+            return "E0" + ns;
+          } else {
+            return "W" + (parseInt(parts[1]) - 1).toString() + ns;
+          }
+        } else {
+          return "E" + (parseInt(parts[1]) + 1).toString() + ns;
+        }
+      case 5:
+        if (parts[2] === "N") {
+          if (parts[3] === "0") {
+            return we + "S0";
+          } else {
+            return we + "N" + (parseInt(parts[3]) - 1).toString();
+          }
+        } else {
+          return we + "S" + (parseInt(parts[3]) + 1).toString();
+        }
+      case 7:
+        if (parts[0] === "E") {
+          if (parts[1] === "0") {
+            return "W0" + ns;
+          } else {
+            return "E" + (parseInt(parts[1]) - 1).toString() + ns;
+          }
+        } else {
+          return "W" + (parseInt(parts[1]) + 1).toString() + ns;
+        }
+    }
   };
 
   Room.prototype.getRoomNameOnSide = function (side: ExitConstant): string {
@@ -178,39 +254,93 @@ export function injectMethods(): void {
 
   RoomPosition.prototype.getFreeSpaceAround = function (): number {
     if (!Game.rooms[this.roomName]) {
-      return 999;
+      return -1;
     }
 
-    const area = Game.rooms[this.roomName].lookAtArea(this.y - 1, this.x - 1, this.y + 1, this.x + 1, true);
-    return 9 - _.sum(area, l => Number(l.terrain === "wall" || l.creep));
+    const area = Game.rooms[this.roomName].lookAtArea(
+      Math.max(0, this.y - 1),
+      Math.max(0, this.x - 1),
+      Math.min(49, this.y + 1),
+      Math.min(49, this.x + 1),
+      true
+    );
+    return 9 - _.sum(area, l => (l.terrain === "wall" || l.creep != null ? 1 : 0));
+  };
+
+  RoomPosition.prototype.getEmptyAround = function (): RoomPosition[] {
+    if (!Game.rooms[this.roomName]) {
+      return [];
+    }
+
+    return Game.rooms[this.roomName]
+      .lookAtArea(
+        Math.max(0, this.y - 1),
+        Math.max(0, this.x - 1),
+        Math.min(49, this.y + 1),
+        Math.min(49, this.x + 1),
+        true
+      )
+      .filter(
+        l =>
+          (l.type === "terrain" && l.terrain !== "wall") ||
+          l.type === "tombstone" ||
+          l.type === "ruin" ||
+          l.type === "flag" ||
+          l.type === "creep" ||
+          l.type === "energy" ||
+          l.type === "resource"
+      )
+      .map(l => new RoomPosition(l.x, l.y, this.roomName));
   };
 
   RoomPosition.prototype.isEmpty = function (): boolean {
-    return this.look().every(
-      l =>
-        (l.type === "terrain" && l.terrain !== "wall") ||
-        l.type === "tombstone" ||
-        l.type === "ruin" ||
-        l.type === "flag" ||
-        l.type === "creep"
-    );
+    if (this._tick ?? 0 < Game.time - 10) {
+      this._tick = Game.time;
+      this._isEmpty = undefined;
+      this._hasRoad = undefined;
+    }
+    this._isEmpty =
+      this._isEmpty ??
+      this.look().every(
+        l =>
+          (l.type === "terrain" && l.terrain !== "wall") ||
+          l.type === "tombstone" ||
+          l.type === "ruin" ||
+          l.type === "flag" ||
+          l.type === "creep" ||
+          l.type === "energy" ||
+          l.type === "resource"
+      );
+    return this._isEmpty;
   };
 
   RoomPosition.prototype.hasRoad = function (): boolean {
-    return (
-      this.lookFor(LOOK_STRUCTURES).some(l => l.structureType === "road") ||
-      this.lookFor(LOOK_CONSTRUCTION_SITES).some(l => l.structureType === "road")
-    );
+    if (this._tick ?? 0 < Game.time - 10) {
+      this._tick = Game.time;
+      this._isEmpty = undefined;
+      this._hasRoad = undefined;
+    }
+    this._hasRoad =
+      this._hasRoad ??
+      (this._isEmpty !== false &&
+        this.look().some(
+          l =>
+            (l.type === "structure" && l.structure?.structureType === STRUCTURE_ROAD) ||
+            (l.type === "constructionSite" && l.constructionSite?.structureType === STRUCTURE_ROAD)
+        ));
+    return this._hasRoad;
   };
 
   RoomPosition.prototype.getAround = function (range: number): RoomPosition[] {
     const positions: RoomPosition[] = [];
     for (let x = -range; x <= range; x++) {
       for (let y = -range; y <= range; y++) {
-        positions.push(new RoomPosition(this.x + x, this.y + y, this.roomName));
+        if (this.x + x >= 0 && this.x + x < 50 && this.y + y >= 0 && this.y + y < 50) {
+          positions.push(new RoomPosition(this.x + x, this.y + y, this.roomName));
+        }
       }
     }
-    return positions.filter(p => p.x >= 0 && p.y >= 0 && p.x < 50 && p.y < 50);
+    return positions;
   };
 
   RoomPosition.prototype.getDirected = function (dir: DirectionConstant): RoomPosition {
@@ -248,6 +378,10 @@ export function injectMethods(): void {
     return this.x === 0 || this.x === 49 || this.y === 0 || this.y === 49;
   };
 
+  RoomPosition.prototype.canBuild = function (): boolean {
+    return this.x > 1 && this.x < 48 && this.y > 1 && this.y < 48;
+  };
+
   StructureSpawn.prototype.spawnCreepCached = function (
     body: BodyPartConstant[],
     name: string,
@@ -274,10 +408,11 @@ export function injectMethods(): void {
 
   Creep.prototype.travelTo = function (
     target: RoomPosition | _HasRoomPosition,
-    avoid?: (room: Room) => RoomPosition[]
+    avoid?: (room: Room) => RoomPosition[],
+    options?: MoveToOpts | undefined
   ): () => MoveToReturnCode {
     const targeted = target instanceof RoomPosition ? target : target.pos;
-    const addonAvoided = targeted.isBorderCell() ? [] : this.room.find(FIND_EXIT);
+    const addonAvoided = targeted.isBorderCell() ? [] : exits(this.room, 1000);
     const avoided = [...(avoid?.call(undefined, this.room) ?? []), ...addonAvoided];
     const costCallback = (name: string, matrix: CostMatrix) =>
       avoided.filter(a => a.roomName === name).forEach(a => matrix.set(a.x, a.y, Number.MAX_VALUE));
@@ -290,16 +425,18 @@ export function injectMethods(): void {
             heuristicWeight: 1.5,
             reusePath: 10,
             visualizePathStyle: { stroke: "#" + hash.toString(16) },
-            costCallback
+            costCallback,
+            ...(options ?? {})
           });
   };
 
   Creep.prototype.travelInto = function (
     target: RoomPosition | _HasRoomPosition,
-    avoid?: (room: Room) => RoomPosition[]
+    avoid?: (room: Room) => RoomPosition[],
+    options?: MoveToOpts | undefined
   ): MoveToReturnCode {
     const targeted = target instanceof RoomPosition ? target : target.pos;
-    const addonAvoided = targeted.isBorderCell() ? [] : this.room.find(FIND_EXIT);
+    const addonAvoided = targeted.isBorderCell() ? [] : exits(this.room, 1000);
     const avoided = [...(avoid?.call(undefined, this.room) ?? []), ...addonAvoided];
     const costCallback = (name: string, matrix: CostMatrix) =>
       avoided.filter(a => a.roomName === name).forEach(a => matrix.set(a.x, a.y, Number.MAX_VALUE));
@@ -308,7 +445,8 @@ export function injectMethods(): void {
       reusePath: 10,
       heuristicWeight: 1.5,
       visualizePathStyle: { stroke: "#" + hash.toString(16) },
-      costCallback: avoid ? costCallback : undefined
+      costCallback: avoid ? costCallback : undefined,
+      ...(options ?? {})
     });
   };
 

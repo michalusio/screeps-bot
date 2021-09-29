@@ -48,10 +48,12 @@ export function wrapWithStages(loop: (creepCount: CreepCounter) => void): (creep
       }
       if (performOrders(room)) return;
 
+      //
       const mode = modes[room.memory.mode];
       const stages = mode.stages(room);
 
       const stageIndex = getCurrentStageIndex(room, stages, roomCounter);
+
       if (mode.canLeave(room) && stageIndex === stages.length - 1) {
         const openModes = Object.keys(modes)
           .map(m => modes[m])
@@ -67,12 +69,11 @@ export function wrapWithStages(loop: (creepCount: CreepCounter) => void): (creep
         }
       }
 
-      if (room.find(FIND_MY_SPAWNS).some(s => !s.spawning)) {
+      if (mySpawns(room, 50).some(s => !s.spawning)) {
         const civLevel = (room.memory.civilizationLevel ?? 0) * 0.9 + stageIndex * 0.1;
         room.memory.civilizationLevel = Math.floor(civLevel * 100) / 100;
       }
 
-      //
       const [nextRequirements, placementsToPlace] = getNextStageDelta(stageIndex, room, stages, roomCounter);
 
       if (placementsToPlace.length > 0 && room.find(FIND_MY_CONSTRUCTION_SITES).length === 0) {
@@ -138,7 +139,7 @@ function getCurrentStageIndex(room: Room, stages: Stage[], creepCount: RoomCreep
       }
     }
     for (const placement of stage.structures || []) {
-      if (structuresPlaced(room, placement, 20)) return stageIndex;
+      if (structuresPlaced(room, placement, 1)) return stageIndex;
     }
     stageIndex++;
   }

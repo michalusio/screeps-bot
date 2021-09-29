@@ -36,8 +36,8 @@ const body = () => {
   } catch (e) {
     if (e instanceof Error) {
       console.log(e.stack);
-    }
-    console.log(e);
+      console.log(e.message);
+    } else console.log(e);
   }
 };
 
@@ -56,6 +56,7 @@ if (!Memory.visuals) {
 if (!Memory.scoutData) {
   Memory.scoutData = {};
 }
+Memory.afterReset = true;
 
 export const loop = (): void => {
   //#if _PROFILER
@@ -63,4 +64,5 @@ export const loop = (): void => {
   //#else
   body();
   //#endif
+  Memory.afterReset = false;
 };

@@ -1,3 +1,5 @@
+import { activeSources, sources } from "cache/source-cache";
+import { mySpawns } from "cache/structure-cache";
 import { energyContainerNotFull, fillBody, getByIdOrNew, tryDoOrMove } from "utils/creeps";
 import { log } from "utils/log";
 
@@ -34,10 +36,10 @@ export function remoteMinerBehavior(creep: Creep): void {
   if (creepMemory.sourceRoom === undefined) {
     creepMemory.sourceRoom = minBy(
       [
-        Game.rooms[creepMemory.originRoom].getRoomNameOnSide(FIND_EXIT_TOP),
-        Game.rooms[creepMemory.originRoom].getRoomNameOnSide(FIND_EXIT_BOTTOM),
-        Game.rooms[creepMemory.originRoom].getRoomNameOnSide(FIND_EXIT_LEFT),
-        Game.rooms[creepMemory.originRoom].getRoomNameOnSide(FIND_EXIT_RIGHT)
+        getRoomNameOnSide(creepMemory.originRoom, FIND_EXIT_TOP),
+        getRoomNameOnSide(creepMemory.originRoom, FIND_EXIT_BOTTOM),
+        getRoomNameOnSide(creepMemory.originRoom, FIND_EXIT_LEFT),
+        getRoomNameOnSide(creepMemory.originRoom, FIND_EXIT_RIGHT)
       ].filter(name => !Memory.noRemoteMining.includes(name)),
       r =>
         Object.keys(Game.creeps)
@@ -58,16 +60,16 @@ export function remoteMinerBehavior(creep: Creep): void {
           break;
         }
         if (creep.room.name === creepMemory.sourceRoom) {
-          const spawns = creep.room.find(FIND_MY_SPAWNS).length;
+          const spawns = mySpawns(creep.room, 50).length;
           if (spawns > 0) {
             if (!Memory.noRemoteMining.includes(creep.room.name)) {
               Memory.noRemoteMining.push(creep.room.name);
             }
             creepMemory.sourceRoom = undefined;
           }
-          const source = minBy(remoteMiner.room.find(FIND_SOURCES_ACTIVE), s => s.pos.getRangeTo(remoteMiner));
+          const source = minBy(activeSources(remoteMiner.room, 50), s => s.pos.getRangeTo(remoteMiner));
           if (!source) {
-            const newSource = minBy(remoteMiner.room.find(FIND_SOURCES), s => s.ticksToRegeneration);
+            const newSource = minBy(sources(remoteMiner.room, 1000), s => s.ticksToRegeneration);
             if (newSource) {
               remoteMiner.travelTo(newSource)();
             }

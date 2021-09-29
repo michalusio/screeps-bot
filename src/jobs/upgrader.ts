@@ -37,6 +37,7 @@ export function upgraderBehavior(creep: Creep): void {
         }
         creepMemory.sourcePoint = source.id;
         if (tryDoOrMove(() => upgrader.withdraw(source, RESOURCE_ENERGY), upgrader.travelTo(source)) !== OK) {
+          changeState("sourcing", upgrader);
           upgrader.wander();
         }
         if (upgrader.store.getUsedCapacity(RESOURCE_ENERGY) >= upgrader.store.getCapacity()) {

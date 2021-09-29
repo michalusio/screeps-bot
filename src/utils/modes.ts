@@ -10,6 +10,7 @@ import { roadsToSources } from "placements/roads-to-sources";
 import { spawnPlaza } from "placements/spawn-plaza";
 import { link, storage } from "placements/storage-and-link";
 import { canClaim } from "placements/can-claim";
+import { constructionSites, freeEnergyContainers, mySpawns } from "cache/structure-cache";
 
 export interface RoleRequirements {
   [key: string]: number;
@@ -32,7 +33,7 @@ export const Bootstrap = {
   canEnter: (): boolean => false,
   canLeave: (room: Room): boolean => (room.controller?.level ?? -1) >= 6,
   stages: (room: Room): Stage[] => {
-    const builderMod = room.find(FIND_MY_CONSTRUCTION_SITES).length > 0 ? 1 : 0;
+    const builderMod = constructionSites(room, 50).length > 0 ? 1 : 0;
     return [
       { roles: { miner: 1, hauler: 1 } },
       { roles: { miner: 2, hauler: 2, upgrader: 1 } },
@@ -40,23 +41,30 @@ export const Bootstrap = {
       { roles: { upgrader: 2, builder: builderMod }, structures: [rcl(2), extensionPlacer(5)] },
       { roles: { builder: 2 * builderMod, remoteminer: 1 }, structures: [roadsToSources, roadsBetweenSources] },
       { roles: { hauler: 3 }, structures: [roadsToController, spawnPlaza, rcl(3), extensionPlacer(10)] },
-      { roles: { towerbro: 1, remoteminer: 2 }, structures: [placeContainers, placeTower(1)] },
+      { roles: {}, structures: [placeTower(1)] },
+      { roles: { towerbro: 1, remoteminer: 2 }, structures: [placeContainers] },
       { roles: { remoteminer: 4, upgrader: 4 }, structures: [roadsToExits, rcl(4), extensionPlacer(20)] },
       { roles: { remoteminer: 6, scout: 1 }, structures: [storage, placeTower(2), rcl(5), link, extensionPlacer(30)] }
     ];
   }
 };
 
-const bootstrapRoles = (builders: number) => ({
-  defender: 1,
-  miner: 2,
-  hauler: 3,
-  upgrader: 4,
-  builder: builders,
-  towerbro: 1,
-  remoteminer: 6,
-  scout: 1
-});
+const bootstrapRoles = (room: Room) => {
+  const level = room.controller?.level ?? -1;
+  const builderMod = constructionSites(room, 50).length > 0 ? 2 : 0;
+  const miningMod = freeEnergyContainers(room, 0).length > 0 ? 1 : 0;
+  const upgraderMod = level !== 8 ? 4 : 1;
+  return {
+    defender: 1,
+    miner: miningMod + 1,
+    hauler: miningMod * 2 + 1,
+    upgrader: upgraderMod,
+    builder: builderMod,
+    towerbro: 1,
+    remoteminer: miningMod * 6,
+    scout: 1
+  };
+};
 
 const bootstrapStructures = [
   rcl(2),
@@ -78,10 +86,9 @@ const bootstrapStructures = [
 
 export const Scouting = {
   name: "Scouting",
-  canEnter: (room: Room): boolean => (room.controller?.level ?? -1) >= 6,
+  canEnter: (room: Room): boolean => (room.controller?.level ?? -1) >= 6 && room.memory.children.length === 0,
   canLeave: (room: Room): boolean => (room.controller?.level ?? -1) >= 7,
   stages: (room: Room): Stage[] => {
-    const builderMod = room.find(FIND_MY_CONSTRUCTION_SITES).length > 0 ? 2 : 0;
     return [
       EMPTY,
       EMPTY,
@@ -90,11 +97,12 @@ export const Scouting = {
       EMPTY,
       EMPTY,
       EMPTY,
+      EMPTY,
       {
-        roles: bootstrapRoles(builderMod),
+        roles: bootstrapRoles(room),
         structures: bootstrapStructures
       },
-      { roles: { scout: 3 }, structures: [] }
+      { roles: { scout: 3 } }
     ];
   }
 };
@@ -108,17 +116,16 @@ export const Colonizing = {
       .some(r => (r.controller?.my ?? false) && r.controller?.progress === 0);
     const roomsToBuild = room.memory.children
       .map(c => Game.rooms[c])
-      .some(r => (r.controller?.my ?? false) && r.controller?.progress === 0 && r.find(FIND_MY_SPAWNS).length === 0);
+      .some(r => (r.controller?.my ?? false) && r.controller?.progress === 0 && mySpawns(r, 50).length === 0);
     return !claimedRooms && !roomsToBuild && room.memory.children.length > 0;
   },
   stages: (room: Room): Stage[] => {
-    const builderMod = room.find(FIND_MY_CONSTRUCTION_SITES).length > 0 ? 2 : 0;
     const claimedRooms = room.memory.children
       .map(c => Game.rooms[c])
       .some(r => (r.controller?.my ?? false) && r.controller?.progress === 0);
     const roomsToBuild = room.memory.children
       .map(c => Game.rooms[c])
-      .some(r => (r.controller?.my ?? false) && r.controller?.progress === 0 && r.find(FIND_MY_SPAWNS).length === 0);
+      .some(r => (r.controller?.my ?? false) && r.controller?.progress === 0 && mySpawns(r, 50).length === 0);
     return [
       EMPTY,
       EMPTY,
@@ -126,14 +133,14 @@ export const Colonizing = {
       EMPTY,
       EMPTY,
       EMPTY,
+      EMPTY,
       {
-        roles: bootstrapRoles(builderMod),
+        roles: bootstrapRoles(room),
         structures: bootstrapStructures
       },
-      { roles: {}, structures: [rcl(7), canClaim] },
+      { roles: {}, structures: [rcl(7), ...(room.memory.children.length > 0 ? [] : [canClaim])] },
       {
-        roles: { scout: 3, claimer: claimedRooms || roomsToBuild ? 0 : 1, conquistadores: roomsToBuild ? 4 : 0 },
-        structures: []
+        roles: { scout: 3, claimer: claimedRooms || roomsToBuild ? 0 : 1, conquistadores: roomsToBuild ? 4 : 0 }
       }
     ];
   }
@@ -144,7 +151,6 @@ export const Idling = {
   canEnter: (room: Room): boolean => room.memory.children.length > 1,
   canLeave: (): boolean => false,
   stages: (room: Room): Stage[] => {
-    const builderMod = room.find(FIND_MY_CONSTRUCTION_SITES).length > 0 ? 2 : 0;
     return [
       EMPTY,
       EMPTY,
@@ -156,10 +162,10 @@ export const Idling = {
       EMPTY,
       EMPTY,
       {
-        roles: bootstrapRoles(builderMod),
+        roles: bootstrapRoles(room),
         structures: bootstrapStructures
       },
-      { roles: { scout: 3 }, structures: [rcl(7)] }
+      { roles: { scout: 3, upgrader: 5 }, structures: [rcl(7)] }
     ];
   }
 };
