@@ -8,7 +8,8 @@ export function sacrificeBehavior(creep: Creep): void {
         backgroundColor: "gray",
         backgroundPadding: 0.15
       });
-      creep.travelTo(_.first(mySpawns(creep.room, 50)))();
+      creep.travelTo(_.first(mySpawns(creep.room)))();
+      if (Math.random() < 0.001) creep.suicide();
       break;
   }
 }

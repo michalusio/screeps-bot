@@ -1,23 +1,58 @@
+import { REPAIR_PRIORITY } from "configs";
 import { cacheForRoom } from "./cache-util";
+import { sources } from "./source-cache";
 
-export const structures = cacheForRoom(room => room.find(FIND_STRUCTURES));
+export const structures = cacheForRoom("structures", room => room.find(FIND_STRUCTURES));
 
-const nonEmptyEnergyContainersCache = cacheForRoom(
+export const sourceContainers = cacheForRoom("source containers", room => {
+  const sourceList = sources(room, 1000);
+  return structures(room, 10)
+    .filter(s => s.structureType === STRUCTURE_CONTAINER)
+    .filter(s => sourceList.some(source => s.pos.isNearTo(source))) as StructureContainer[];
+});
+
+const towersSpawnContainersCache = cacheForRoom("towers/spawns/extensions", room =>
+  room
+    .find<FIND_MY_STRUCTURES, StructureTower | StructureSpawn | StructureExtension>(FIND_MY_STRUCTURES)
+    .filter(
+      (s: AnyStructure) =>
+        (s.structureType === STRUCTURE_TOWER ||
+          s.structureType === STRUCTURE_SPAWN ||
+          s.structureType === STRUCTURE_EXTENSION) &&
+        s.store.getFreeCapacity(RESOURCE_ENERGY) > 0
+    )
+    .map(s => s.id)
+);
+export const towersSpawnContainers = (
+  room: Room,
+  time: number
+): (StructureTower | StructureSpawn | StructureExtension)[] =>
+  towersSpawnContainersCache(room, time)
+    .map(id => Game.getObjectById(id))
+    .filter(s => s != null) as (StructureTower | StructureSpawn | StructureExtension)[];
+
+const energyStoragesCache = cacheForRoom(
+  "energy storages",
   room =>
     room
       .find(FIND_STRUCTURES)
-      .filter(isEnergyStorageAnd())
+      .filter(isEnergyStorage)
       .map(s => s.id) as Id<StructureContainer | StructureStorage>[]
 );
-export const nonEmptyEnergyContainers = (room: Room, time: number): (StructureContainer | StructureStorage)[] =>
-  nonEmptyEnergyContainersCache(room, time)
+export const energyStorages = (room: Room): (StructureContainer | StructureStorage)[] =>
+  energyStoragesCache(room, 100)
     .map(id => Game.getObjectById(id))
     .filter(s => s != null) as (StructureContainer | StructureStorage)[];
 
-const freeEnergyContainersCache = cacheForRoom(room =>
+export const energyStoragesWithoutSourcedCache = cacheForRoom("energy storages without sourced", room => {
+  const sourceList = sources(room, 1000);
+  return energyStorages(room).filter(s => sourceList.every(source => !s.pos.isNearTo(source)));
+});
+
+const freeEnergyContainersCache = cacheForRoom("free energy containers", room =>
   _.filter<StructureContainer | StructureStorage | StructureExtension | StructureSpawn>(
     room.find(FIND_STRUCTURES),
-    isEnergyContainerAnd(s => s.store.getFreeCapacity(RESOURCE_ENERGY) > 0)
+    isEnergyContainerAnd(s => s.store.getFreeCapacity(RESOURCE_ENERGY) > (s.structureType === "spawn" ? 30 : 0))
   ).map(s => s.id)
 );
 export const freeEnergyContainers = (
@@ -28,7 +63,7 @@ export const freeEnergyContainers = (
     .map(id => Game.getObjectById(id))
     .filter(s => s != null) as (StructureContainer | StructureStorage | StructureExtension | StructureSpawn)[];
 
-export const structuresToRepair = cacheForRoom(room =>
+export const structuresToRepair = cacheForRoom("structures to repair", room =>
   room
     .find(FIND_STRUCTURES)
     .filter(
@@ -38,7 +73,7 @@ export const structuresToRepair = cacheForRoom(room =>
     )
 );
 
-export const structuresToRepairByTower = cacheForRoom(room =>
+export const structuresToRepairByTower = cacheForRoom("structures to repair by tower", room =>
   _.sortBy(
     room
       .find(FIND_STRUCTURES)
@@ -47,51 +82,31 @@ export const structuresToRepairByTower = cacheForRoom(room =>
           s.hits < s.hitsMax &&
           (s.room.memory.wallRepairs || (s.structureType !== "constructedWall" && s.structureType !== "rampart"))
       ),
-    s => repairPriority[s.structureType] * 1000 - (s.hitsMax - s.hits) / s.hitsMax
+    s => REPAIR_PRIORITY[s.structureType] * 1000 - (s.hitsMax - s.hits) / s.hitsMax
   )
 );
 
-const repairPriority = {
-  spawn: 0,
-  extension: 10,
-  road: 15,
-  container: 15,
-  tower: 20,
-
-  storage: 25,
-  link: 25,
-  constructedWall: 25,
-
-  rampart: 30,
-
-  observer: 50,
-  powerSpawn: 50,
-  extractor: 50,
-  lab: 50,
-  terminal: 50,
-  nuker: 50,
-  factory: 50,
-
-  invaderCore: 999,
-  keeperLair: 999,
-  controller: 999,
-  powerBank: 999,
-  portal: 999
-};
-
-const constructionSitesCache = cacheForRoom(room => room.find(FIND_MY_CONSTRUCTION_SITES).map(s => s.id));
+const constructionSitesCache = cacheForRoom("construction sites", room =>
+  room.find(FIND_MY_CONSTRUCTION_SITES).map(s => s.id)
+);
 export const constructionSites = (room: Room, time: number): ConstructionSite[] =>
   constructionSitesCache(room, time)
     .map(id => Game.getObjectById(id))
     .filter(s => s != null) as ConstructionSite[];
 
-const mySpawnsCache = cacheForRoom(room => room.find(FIND_MY_SPAWNS).map(s => s.id));
-export const mySpawns = (room: Room, time: number): StructureSpawn[] =>
-  mySpawnsCache(room, time)
+const hostileSpawnsCache = cacheForRoom("hostile spawns", room => room.find(FIND_HOSTILE_SPAWNS).map(s => s.id));
+export const hostileSpawns = (room: Room, time: number): StructureSpawn[] =>
+  hostileSpawnsCache(room, time)
     .map(id => Game.getObjectById(id))
     .filter(s => s != null) as StructureSpawn[];
 
-const myTowersCache = cacheForRoom(room =>
+const mySpawnsCache = cacheForRoom("my spawns", room => room.find(FIND_MY_SPAWNS).map(s => s.id));
+export const mySpawns = (room: Room): StructureSpawn[] =>
+  mySpawnsCache(room, 200)
+    .map(id => Game.getObjectById(id))
+    .filter(s => s != null) as StructureSpawn[];
+
+const myTowersCache = cacheForRoom("my towers", room =>
   room
     .find<FIND_MY_STRUCTURES, StructureTower>(FIND_MY_STRUCTURES)
     .filter(
@@ -104,8 +119,8 @@ export const myTowers = (room: Room, time: number): StructureTower[] =>
     .map(id => Game.getObjectById(id))
     .filter(t => t != null) as StructureTower[];
 
-export const extensionsToSpawnFrom = cacheForRoom(room => {
-  const spawns = mySpawns(room, 50).map(s => s.pos);
+export const extensionsToSpawnFrom = cacheForRoom("extensions for spawning", room => {
+  const spawns = mySpawns(room).map(s => s.pos);
   return _.sortBy(
     room.find(FIND_MY_STRUCTURES).filter(s => s.structureType === "extension" || s.structureType === "spawn"),
     s => _.sum(spawns, spawn => spawn.getRangeTo(s))
@@ -121,9 +136,6 @@ function isEnergyContainerAnd(
     predicate(s);
 }
 
-function isEnergyStorageAnd(
-  predicate?: (s: StructureStorage | StructureContainer) => boolean
-): (s: AnyStructure) => boolean {
-  return (s: AnyStructure) =>
-    ((s.structureType === "storage" && s.my) || s.structureType === "container") && (predicate ? predicate(s) : true);
+function isEnergyStorage(s: AnyStructure) {
+  return (s.structureType === "storage" && s.my) || s.structureType === "container";
 }

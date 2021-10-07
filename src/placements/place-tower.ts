@@ -1,4 +1,5 @@
 import { mySpawns } from "cache/structure-cache";
+import { SPAWN_ACTIVE_AREA } from "configs";
 import { log } from "utils/log";
 
 import { Placement } from "./placement";
@@ -12,9 +13,11 @@ export const placeTower: (n: number) => Placement = (n: number) => ({
       room.find(FIND_MY_STRUCTURES).filter(s => s.structureType === STRUCTURE_TOWER).length -
       room.find(FIND_MY_CONSTRUCTION_SITES).filter(s => s.structureType === STRUCTURE_TOWER).length;
     if (toTake > 0) {
-      const spawns = mySpawns(room, 50);
+      const spawns = mySpawns(room);
       const allEmptyPositionsAroundSpawns = spawns.flatMap(spawn =>
-        spawn.pos.getAround(6).filter(p => p.getRangeTo(spawn) >= 4 && p.isEmpty())
+        spawn.pos
+          .getAround(SPAWN_ACTIVE_AREA + 1)
+          .filter(p => p.getRangeTo(spawn) >= SPAWN_ACTIVE_AREA - 1 && p.isEmpty() && p.canBuild())
       );
       const allEmptyPositionsWithSpaceAroundAndRoad = allEmptyPositionsAroundSpawns
         .filter(p => p.findInRange(FIND_MY_STRUCTURES, 1).length === 0)

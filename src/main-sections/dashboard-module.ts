@@ -1,3 +1,4 @@
+import { directionExitsFromSpawn } from "cache/path-cache";
 import { getAllure, placeInitialSpawn } from "jobs/claimer";
 import { messages, pruneLogs } from "../utils/log";
 import { CreepCounter } from "./creep-counting";
@@ -10,21 +11,22 @@ export function logging(creepCount: CreepCounter): void {
 
   showSpawnVisuals();
 
-  if (Memory.cpu.length > 9) Memory.cpu.splice(0, Memory.cpu.length - 9);
-  Memory.cpu.push(Game.cpu.getUsed());
-
   if (!Memory.visuals) return;
 
   let roles: string[] = [];
   creepCount.forEach(roomCounter => (roles = _.union(roles, _.keys(roomCounter.perRole))));
   roles.sort();
 
-  const bucket = Game.cpu.bucket;
-  const points = Math.floor(bucket / 1000);
+  Object.keys(Game.rooms).forEach(roomName => {
+    const visual = Game.rooms[roomName].visual;
+    directionExitsFromSpawn(Game.rooms[roomName], 5).forEach(e => {
+      visual.circle(e[1].x, e[1].y, { fill: "red" });
+    });
+  });
 
   creepCount.forEach((_, roomName) => {
     const room = Game.rooms[roomName];
-    if (!room.memory) return;
+    if (!room || !room.memory) return;
     const visual = room.visual;
     Game.map.visual.text(room.memory.mode, new RoomPosition(25, 5, room.name), {
       fontFamily: "monospace",
@@ -37,33 +39,17 @@ export function logging(creepCount: CreepCounter): void {
         color: "#cccccc"
       });
     }
-    new Renderer(visual)
-      .table(tb => {
-        tb.addHeader(["Bucket".padEnd(16, " ")]).addRow([["★".repeat(points), { color: "yellow" }]]);
-      })
-      .hr()
-      .table(tb => {
-        tb.addHeader(["Room", "E-lvl", ...roles, "Mode".padEnd(10, " ")]);
-        creepCount.forEach((roomCounter, roomName) =>
-          tb.addRowConditional(Object.keys(Memory.rooms[roomName]).length > 0, [
-            roomName,
-            civilizationEnergyLevel(Memory.rooms[roomName].civilizationLevel).toString(),
-            ...roles.map(v => roomCounter.perRole[v]?.toString() ?? "0"),
-            Memory.rooms[roomName].mode
-          ])
-        );
-      })
-      .hr()
-      .chart(
-        Memory.cpu.map((c, i) => [i, c]),
-        cb =>
-          cb
-            .size(10, 5)
-            .scaling(1, 1 / 5)
-            .lineAt(20, "20")
-            .lineAt(0, "0")
-            .render()
+    new Renderer(visual).table(tb => {
+      tb.addHeader(["Room", "E-lvl", ...roles, "Mode".padEnd(10, " ")]);
+      creepCount.forEach((roomCounter, roomName) =>
+        tb.addRowConditional(Object.keys(Memory.rooms[roomName] || {}).length > 0, [
+          roomName,
+          civilizationEnergyLevel(Memory.rooms[roomName]?.civilizationLevel ?? 0).toString(),
+          ...roles.map(v => roomCounter.perRole[v]?.toString() ?? "0"),
+          Memory.rooms[roomName]?.mode ?? "none"
+        ])
       );
+    });
 
     new Renderer(visual, "right").table(tb => {
       tb.addHeader(["Message".padEnd(56, " "), "Count"]);
@@ -289,6 +275,7 @@ export class ChartBuilder {
     return this;
   }
 }
+
 function showScoutVisuals() {
   const sortedByDistance = _.sortBy(
     _.filter(
@@ -332,6 +319,7 @@ function showScoutVisuals() {
     }
   });
 }
+
 function showSpawnVisuals() {
   if (!Memory.spawnVisualizer) return;
   Memory.spawnVisualizer.forEach(room => {

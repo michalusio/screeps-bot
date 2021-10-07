@@ -35,7 +35,6 @@ export function scoutBehavior(creep: Creep): void {
   switch (creepMemory.state) {
     case "scouting":
       {
-        Game.map.visual.circle(creep.pos, { fill: "#ffffff", radius: 2, opacity: 0.8 });
         let pos: RoomPosition | null = creepMemory.exitPosition
           ? new RoomPosition(creepMemory.exitPosition.x, creepMemory.exitPosition.y, creepMemory.exitPosition.room)
           : null;
@@ -58,11 +57,12 @@ export function scoutBehavior(creep: Creep): void {
           creepMemory.lastDirection = dir;
           creepMemory.exitPosition = { x: pos.x, y: pos.y, room: pos.roomName };
         }
-        creep.travelInto(pos);
+        creep.travelInto(pos, undefined, { reusePath: 100 });
       }
       break;
   }
 }
+
 function performScouting(creep: Creep) {
   let swampRatio = 0;
   let wallRatio = 0;
@@ -101,7 +101,9 @@ function performScouting(creep: Creep) {
                 creep.room.findPath(s, controller.pos, {
                   ignoreCreeps: true,
                   ignoreRoads: true,
-                  ignoreDestructibleStructures: true
+                  ignoreDestructibleStructures: true,
+                  maxRooms: 1,
+                  swampCost: 1
                 }),
                 r => terrain.get(r.x, r.y) / 2 + 1
               ),
@@ -116,7 +118,10 @@ function performScouting(creep: Creep) {
     tick: Game.time,
     controllerLvl: creep.room.controller?.level ?? null,
     sources: sources(creep.room, 1000).length,
-    spawn: creep.room.find(FIND_CONSTRUCTION_SITES).filter(s => s.structureType === "spawn").length > 0,
+    spawn:
+      creep.room.find(FIND_CONSTRUCTION_SITES).filter(s => s.structureType === "spawn").length +
+        creep.room.find(FIND_STRUCTURES).filter(s => s.structureType === "spawn").length >
+      0,
     swampRatio,
     wallRatio,
     sourcesControllerAverageDistance,

@@ -1,5 +1,6 @@
-import { exits } from "cache/path-cache";
+import { exits, getPathFromCache } from "cache/path-cache";
 import { extensionsToSpawnFrom } from "cache/structure-cache";
+import { AttackerMemory } from "jobs/offence/attacker";
 import { RemoteMinerMemory } from "jobs/remote-miner";
 import { MoveToReturnCode } from "./creeps";
 
@@ -39,11 +40,52 @@ declare global {
   interface Memory {
     creepIndex: number;
     noRemoteMining: string[];
-    cpu: number[];
     visuals: boolean;
     scoutData: { [key: string]: ScoutData };
     afterReset: boolean;
     spawnVisualizer: string[];
+    timings: { [time: number]: { [key: string]: number } };
+    stats: {
+      gcl: {
+        level: number;
+        progress: number;
+        progressTotal: number;
+      };
+      cpu: {
+        value: number;
+        limit: number;
+      };
+      heap: {
+        value: number;
+        limit: number;
+      };
+      energy: {
+        value: number;
+        limit: number;
+      };
+      room: {
+        [name: string]: {
+          energy: {
+            capacity: number;
+            available: number;
+            storage: number;
+            terminal: number;
+          };
+          rcl: {
+            level: number;
+            progress: number;
+            progressTotal: number;
+          };
+          image?: string;
+        };
+      };
+      creep: {
+        [role: string]: { count: number; time: number };
+      };
+      cacheHits: {
+        [key: string]: number;
+      };
+    };
   }
 
   interface Creep {
@@ -99,6 +141,10 @@ declare global {
     children: string[];
   }
 
+  interface FlagMemory {
+    date: number;
+  }
+
   interface RoomPosition {
     getFreeSpaceAround(): number;
     getEmptyAround(): RoomPosition[];
@@ -117,8 +163,16 @@ declare global {
     getRoomNameOnSide(side: ExitConstant): string;
   }
 
+  // eslint-disable-next-line no-var
+  var RoomTrackerInjected: boolean;
+  // eslint-disable-next-line no-var
+  var roomsViewed: { tick: number; roomName: string }[];
+  function forceInjectRoomTracker(): void;
+  function clear(): void;
+
   function assignRemotes(howMany: number, roomName: string): void;
   function order(roomName: string, role: string, howMany: number): void;
+  function rally(color: ColorConstant, howMany: number): void;
   function minBy<T>(collection: T[], iteratee?: (val: T) => number): T | undefined;
   function getRoomNameOnSide(name: string, side: ExitConstant): string;
   function showSpawnFor(room: string): void;
@@ -133,6 +187,12 @@ export function injectMethods(): void {
   global.showSpawnFor = function (room: string): void {
     if (!Memory.spawnVisualizer) Memory.spawnVisualizer = [];
     Memory.spawnVisualizer.push(room);
+  };
+
+  global.clear = function (): void {
+    console.log(
+      "<script>angular.element(document.getElementsByClassName('fa fa-trash ng-scope')[0].parentNode).scope().Console.clear()</script>"
+    );
   };
 
   String.prototype.hashCode = function (): number {
@@ -154,6 +214,17 @@ export function injectMethods(): void {
     const room = new Room(roomName);
     room.memory.orders = room.memory.orders || {};
     room.memory.orders[role] = (room.memory.orders[role] || 0) + howMany;
+  };
+
+  global.rally = function (color: ColorConstant, howMany: number): void {
+    const attackerCreeps = Object.keys(Game.creeps)
+      .map(id => Game.creeps[id])
+      .filter(c => c.roleMemory.role === "attacker" && !(c.roleMemory as AttackerMemory).squadColor);
+    if (attackerCreeps.length < howMany) {
+      log(`Cannot assign ${howMany} attackers - only ${attackerCreeps.length} are left unassigned.`);
+    } else {
+      _.take(attackerCreeps, howMany).forEach(c => ((c.roleMemory as AttackerMemory).squadColor = color));
+    }
   };
 
   global.getRoomNameOnSide = function (name: string, side: ExitConstant): string {
@@ -412,22 +483,37 @@ export function injectMethods(): void {
     options?: MoveToOpts | undefined
   ): () => MoveToReturnCode {
     const targeted = target instanceof RoomPosition ? target : target.pos;
-    const addonAvoided = targeted.isBorderCell() ? [] : exits(this.room, 1000);
-    const avoided = [...(avoid?.call(undefined, this.room) ?? []), ...addonAvoided];
-    const costCallback = (name: string, matrix: CostMatrix) =>
-      avoided.filter(a => a.roomName === name).forEach(a => matrix.set(a.x, a.y, Number.MAX_VALUE));
     const hash = (this.roleMemory.role.hashCode() >> 8) & 0xffffff;
-    return () =>
-      this.pos.isNearTo(target)
-        ? OK
-        : this.moveTo(target, {
-            range: 1,
-            heuristicWeight: 1.5,
-            reusePath: 10,
-            visualizePathStyle: { stroke: "#" + hash.toString(16) },
-            costCallback,
-            ...(options ?? {})
-          });
+    return () => {
+      if (this.pos.isNearTo(targeted)) return OK;
+      const pathMove = this.moveByPath(
+        getPathFromCache(this.pos, targeted, {
+          ignoreRoads: false,
+          ignoreCreeps: false,
+          range: 1,
+          visualizePathStyle: { stroke: "#" + hash.toString(16) },
+          ...(options ?? {})
+        })
+      );
+      if (pathMove === -10) {
+        const addonAvoided = targeted.isBorderCell() ? [] : exits(this.room, 1000);
+        const avoided = [...(avoid?.call(undefined, this.room) ?? []), ...addonAvoided];
+        const costCallback = (name: string, matrix: CostMatrix) => {
+          avoided.filter(a => a.roomName === name).forEach(a => matrix.set(a.x, a.y, Number.MAX_VALUE));
+          return matrix;
+        };
+        return this.moveTo(targeted, {
+          reusePath: 10,
+          heuristicWeight: 1.5,
+          visualizePathStyle: { stroke: "#" + hash.toString(16) },
+          maxOps: 1000,
+          maxRooms: 1,
+          costCallback: avoid ? costCallback : undefined,
+          ...(options ?? {})
+        });
+      }
+      return pathMove;
+    };
   };
 
   Creep.prototype.travelInto = function (
@@ -436,18 +522,35 @@ export function injectMethods(): void {
     options?: MoveToOpts | undefined
   ): MoveToReturnCode {
     const targeted = target instanceof RoomPosition ? target : target.pos;
-    const addonAvoided = targeted.isBorderCell() ? [] : exits(this.room, 1000);
-    const avoided = [...(avoid?.call(undefined, this.room) ?? []), ...addonAvoided];
-    const costCallback = (name: string, matrix: CostMatrix) =>
-      avoided.filter(a => a.roomName === name).forEach(a => matrix.set(a.x, a.y, Number.MAX_VALUE));
     const hash = (this.roleMemory.role.hashCode() >> 8) & 0xffffff;
-    return this.moveTo(target, {
-      reusePath: 10,
-      heuristicWeight: 1.5,
-      visualizePathStyle: { stroke: "#" + hash.toString(16) },
-      costCallback: avoid ? costCallback : undefined,
-      ...(options ?? {})
-    });
+
+    const pathMove = this.moveByPath(
+      getPathFromCache(this.pos, targeted, {
+        ignoreRoads: false,
+        ignoreCreeps: false,
+        range: 0,
+        visualizePathStyle: { stroke: "#" + hash.toString(16) },
+        ...(options ?? {})
+      })
+    );
+    if (pathMove === -10) {
+      const addonAvoided = targeted.isBorderCell() ? [] : exits(this.room, 1000);
+      const avoided = [...(avoid?.call(undefined, this.room) ?? []), ...addonAvoided];
+      const costCallback = (name: string, matrix: CostMatrix) => {
+        avoided.filter(a => a.roomName === name).forEach(a => matrix.set(a.x, a.y, Number.MAX_VALUE));
+        return matrix;
+      };
+      return this.moveTo(targeted, {
+        reusePath: 10,
+        heuristicWeight: 1.5,
+        visualizePathStyle: { stroke: "#" + hash.toString(16) },
+        maxOps: 1000,
+        maxRooms: 1,
+        costCallback: avoid ? costCallback : undefined,
+        ...(options ?? {})
+      });
+    }
+    return pathMove;
   };
 
   Object.defineProperty(Creep.prototype, "roleMemory", {

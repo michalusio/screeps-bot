@@ -1,5 +1,6 @@
-import { structuresPlaced } from "cache/stage-cache";
+import { structuresNotPlaced } from "cache/stage-cache";
 import { mySpawns } from "cache/structure-cache";
+import { PLACEMENT_CACHE_TIME } from "configs";
 import { defenderBody, defenderMemory } from "jobs/defender";
 import { minerBody, minerMemory } from "jobs/miner";
 import { roleUtilities } from "jobs/role-utilities";
@@ -32,7 +33,7 @@ export function wrapWithStages(loop: (creepCount: CreepCounter) => void): (creep
     creepCount.forEach((roomCounter, roomName) => {
       const room = Game.rooms[roomName];
 
-      if (!mySpawns(room, 50).length) return;
+      if (!mySpawns(room).length) return;
 
       if (!room.memory.mode) {
         room.memory.mode = Bootstrap.name;
@@ -69,18 +70,18 @@ export function wrapWithStages(loop: (creepCount: CreepCounter) => void): (creep
         }
       }
 
-      if (mySpawns(room, 50).some(s => !s.spawning)) {
+      if (mySpawns(room).some(s => !s.spawning)) {
         const civLevel = (room.memory.civilizationLevel ?? 0) * 0.9 + stageIndex * 0.1;
         room.memory.civilizationLevel = Math.floor(civLevel * 100) / 100;
       }
 
       const [nextRequirements, placementsToPlace] = getNextStageDelta(stageIndex, room, stages, roomCounter);
-
       if (placementsToPlace.length > 0 && room.find(FIND_MY_CONSTRUCTION_SITES).length === 0) {
+        console.log(`Room ${room.name} placing ${placementsToPlace[0].name}`);
         placementsToPlace[0].place(room);
       }
 
-      mySpawns(room, 50)
+      mySpawns(room)
         .filter(
           spawn =>
             !spawn.spawning &&
@@ -96,7 +97,7 @@ export function wrapWithStages(loop: (creepCount: CreepCounter) => void): (creep
 }
 
 export function civilizationEnergyLevel(civilizationLevel: number | undefined): number {
-  return Math.max(150, 150 + Math.floor((civilizationLevel ?? 0) * 50));
+  return Math.max(200, 200 + Math.floor((civilizationLevel ?? 0) * 50));
 }
 
 function spawnRequirement(spawn: StructureSpawn, requirements: RoleRequirements): void {
@@ -139,7 +140,7 @@ function getCurrentStageIndex(room: Room, stages: Stage[], creepCount: RoomCreep
       }
     }
     for (const placement of stage.structures || []) {
-      if (structuresPlaced(room, placement, 1)) return stageIndex;
+      if (structuresNotPlaced(room, placement, PLACEMENT_CACHE_TIME)) return stageIndex;
     }
     stageIndex++;
   }
@@ -175,7 +176,7 @@ function getNextStageDelta(
           ]
       )
       .filter(p => {
-        if (p[2] < Game.time - 10) {
+        if (Game.time - p[2] > PLACEMENT_CACHE_TIME) {
           p[2] = Game.time;
           p[1] = p[0].isPlaced(room);
           structureCache[room.name] = structureCache[room.name] || {};
@@ -194,7 +195,7 @@ function performOrders(room: Room) {
       if (orders[orderRole] === 0) {
         delete orders[orderRole];
       } else {
-        mySpawns(room, 50)
+        mySpawns(room)
           .filter(spawn => !spawn.spawning && spawn.room.energyAvailable >= 300)
           .forEach(spawn => {
             const body = roleUtilities[orderRole][0](spawn.room.energyAvailable);

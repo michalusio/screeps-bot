@@ -1,4 +1,5 @@
-import { sources } from "cache/source-cache";
+import { droppedEnergy, sources } from "cache/source-cache";
+import { sourceContainers } from "cache/structure-cache";
 import { energyContainerNotFull, fillBody, getByIdOrNew, tryDoOrMove } from "utils/creeps";
 
 import { CreepRoleMemory, stateChanger } from "../utils/creeps/role-memory";
@@ -12,6 +13,8 @@ export interface HaulerMemory extends CreepRoleMemory {
 
   energyPoint?: Id<Resource>;
   tombPoint?: Id<Tombstone>;
+  containerPoint?: Id<StructureContainer>;
+  waitedForStuff: number;
 
   storagePoint?: Id<StructureStorage | StructureSpawn | StructureContainer | StructureExtension>;
 
@@ -25,22 +28,16 @@ export const haulerMemory: HaulerMemory = {
   role: "hauler",
   energyPoint: undefined,
   storagePoint: undefined,
+  containerPoint: undefined,
+  waitedForStuff: 0,
   state: "getting"
 };
 
-const resourceCache: { [room: string]: [Resource<ResourceConstant>[], number] } = {};
-
 const avoidSources = (room: Room): RoomPosition[] => sources(room, 1000).flatMap(s => s.pos.getAround(1));
 const findNewResource = (hauler: Hauler) => () => {
-  resourceCache[hauler.room.name] =
-    (resourceCache[hauler.room.name] ?? [[], 0])[1] === Game.time
-      ? resourceCache[hauler.room.name]
-      : [
-          hauler.room.find(FIND_DROPPED_RESOURCES).filter(r => r.resourceType === RESOURCE_ENERGY && r.amount > 10),
-          Game.time
-        ];
+  const cache = droppedEnergy(hauler.room, 1);
   return _.find(
-    _.sortBy(resourceCache[hauler.room.name][0], r => r.pos.getRangeTo(hauler.pos) * 10),
+    _.sortBy(cache, r => r.pos.getRangeTo(hauler.pos)),
     r => r.pos.getFreeSpaceAround() > 0 || r.pos.isNearTo(hauler)
   );
 };
@@ -61,23 +58,82 @@ export function haulerBehavior(creep: Creep): void {
   switch (creepMemory.state) {
     case "getting":
       {
-        const resource = getByIdOrNew(creepMemory.energyPoint, findNewResource(hauler));
-        if (resource) {
-          creepMemory.energyPoint = resource.id;
-          tryDoOrMove(() => hauler.pickup(resource), hauler.travelTo(resource, avoidSources, { ignoreCreeps: true }));
-        } else {
-          const tombstone = getByIdOrNew(creepMemory.tombPoint, findTombstoneResource(hauler));
-          if (tombstone) {
-            creepMemory.tombPoint = tombstone.id;
-            tryDoOrMove(
-              () => hauler.withdraw(tombstone, RESOURCE_ENERGY),
-              hauler.travelTo(tombstone, avoidSources, { ignoreCreeps: true })
-            );
+        if (creepMemory.waitedForStuff > 5) {
+          creepMemory.waitedForStuff = 0;
+          changeState("getting", hauler);
+        }
+        const order = (
+          [
+            [creepMemory.energyPoint, "droppedEnergy"],
+            [creepMemory.tombPoint, "tombstone"],
+            [creepMemory.containerPoint, "container"]
+          ] as (
+            | [Id<Resource>, "droppedEnergy"]
+            | [Id<Tombstone>, "tombstone"]
+            | [Id<StructureContainer>, "container"]
+          )[]
+        ).sort(a => Math.random() * (a[0] != null ? 1 : -1));
+        for (const [, type] of order) {
+          switch (type) {
+            case "droppedEnergy":
+              {
+                const resource = getByIdOrNew(creepMemory.energyPoint, findNewResource(hauler));
+                if (resource) {
+                  creepMemory.energyPoint = resource.id;
+                  tryDoOrMove(
+                    () => hauler.pickup(resource),
+                    hauler.travelTo(resource, avoidSources, { ignoreCreeps: true }),
+                    hauler,
+                    resource
+                  );
+                  if (hauler.pos.isNearTo(resource)) creepMemory.waitedForStuff++;
+                  checkIfFull(hauler);
+                  return;
+                }
+              }
+              break;
+            case "tombstone":
+              {
+                const tombstone = getByIdOrNew(creepMemory.tombPoint, findTombstoneResource(hauler));
+                if (tombstone) {
+                  creepMemory.tombPoint = tombstone.id;
+                  tryDoOrMove(
+                    () => hauler.withdraw(tombstone, RESOURCE_ENERGY),
+                    hauler.travelTo(tombstone, avoidSources, { ignoreCreeps: true }),
+                    hauler,
+                    tombstone
+                  );
+                  if (hauler.pos.isNearTo(tombstone)) creepMemory.waitedForStuff++;
+                  checkIfFull(hauler);
+                  return;
+                }
+              }
+              break;
+            case "container":
+              {
+                const container = getByIdOrNew(creepMemory.containerPoint, () =>
+                  minBy(
+                    sourceContainers(hauler.room, 10),
+                    c => c.pos.getRangeTo(hauler) * 10 - c.store.getUsedCapacity(RESOURCE_ENERGY)
+                  )
+                );
+                if (container) {
+                  creepMemory.containerPoint = container.id;
+                  tryDoOrMove(
+                    () => hauler.withdraw(container, RESOURCE_ENERGY),
+                    hauler.travelTo(container, avoidSources, { ignoreCreeps: true }),
+                    hauler,
+                    container
+                  );
+                  if (hauler.pos.isNearTo(container)) creepMemory.waitedForStuff++;
+                  checkIfFull(hauler);
+                  return;
+                }
+              }
+              break;
           }
         }
-        if (hauler.store.getUsedCapacity(RESOURCE_ENERGY) >= hauler.store.getCapacity()) {
-          changeState("storing", hauler);
-        }
+        hauler.wander();
       }
       break;
 
@@ -92,16 +148,31 @@ export function haulerBehavior(creep: Creep): void {
         creepMemory.storagePoint = storage.id;
         const transferCode = tryDoOrMove(
           () => hauler.transfer(storage, RESOURCE_ENERGY),
-          hauler.travelTo(storage, avoidSources, { ignoreCreeps: true })
+          hauler.travelTo(storage, avoidSources, { ignoreCreeps: true }),
+          hauler,
+          storage
         );
-        if (transferCode === ERR_FULL || storage.store.getFreeCapacity(RESOURCE_ENERGY) === 0) {
+        if (
+          transferCode === ERR_FULL ||
+          storage.store.getFreeCapacity(RESOURCE_ENERGY) <= (storage.structureType === "spawn" ? 30 : 0)
+        ) {
           changeState("storing", hauler);
+          haulerBehavior(hauler);
         } else if (hauler.store.getUsedCapacity(RESOURCE_ENERGY) <= 1) {
           changeState("getting", hauler);
+          haulerBehavior(hauler);
         }
       }
       break;
   }
 }
 
-const changeState = stateChanger<HaulerMemory>("energyPoint", "storagePoint");
+const changeState = stateChanger<HaulerMemory>("energyPoint", "storagePoint", "tombPoint", "containerPoint");
+
+function checkIfFull(hauler: Hauler): void {
+  if (hauler.store.getUsedCapacity(RESOURCE_ENERGY) >= hauler.store.getCapacity()) {
+    hauler.memory.waitedForStuff = 0;
+    changeState("storing", hauler);
+    haulerBehavior(hauler);
+  }
+}

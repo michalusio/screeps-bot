@@ -5,12 +5,15 @@ export function towerRepairing(): void {
     const towers = myTowers(room, 50);
     if (towers.length === 0) return;
 
-    const toRepair = structuresToRepairByTower(room, 5);
     const hurtCreeps = _.sortBy(
       room.find(FIND_MY_CREEPS).filter(c => c.hits < c.hitsMax),
       c => c.hits
     );
-    const enemies = _.sortBy(room.find(FIND_HOSTILE_CREEPS), c => c.hits);
+
+    const enemies = hurtCreeps.length >= towers.length ? [] : _.sortBy(room.find(FIND_HOSTILE_CREEPS), c => c.hits);
+
+    const toRepair = hurtCreeps.length + enemies.length >= towers.length ? [] : structuresToRepairByTower(room, 5);
+
     towers.forEach(tower => {
       for (let i = 0; i < enemies.length; i++) {
         if (tower.attack(enemies[i]) === OK) {

@@ -1,4 +1,5 @@
 import { sources } from "cache/source-cache";
+import { sourceContainers } from "cache/structure-cache";
 import { fillBody, getByIdOrNew, tryDoOrMove } from "utils/creeps";
 
 import { CreepRoleMemory } from "../utils/creeps/role-memory";
@@ -15,7 +16,7 @@ export interface MinerMemory extends CreepRoleMemory {
   state: "mining";
 }
 
-export const minerBody = fillBody.bind(undefined, 8, [MOVE, WORK, WORK, WORK]);
+export const minerBody = fillBody.bind(undefined, 6, [WORK, MOVE, WORK, WORK, WORK, WORK]);
 
 export const minerMemory: MinerMemory = {
   newCreep: true,
@@ -44,7 +45,21 @@ export function minerBehavior(creep: Creep): void {
           break;
         } else {
           creepMemory.sourcePoint = source.id;
-          tryDoOrMove(() => miner.harvest(source), miner.travelTo(source));
+          const sourceContainer = sourceContainers(miner.room, 10).filter(c => c.pos.isNearTo(source))[0];
+          if (sourceContainer) {
+            tryDoOrMove(
+              () => miner.harvest(source),
+              () => miner.travelInto(sourceContainer, undefined, { ignoreCreeps: true }),
+              miner,
+              source
+            );
+          } else
+            tryDoOrMove(
+              () => miner.harvest(source),
+              miner.travelTo(source, undefined, { ignoreCreeps: true }),
+              miner,
+              source
+            );
         }
       }
       break;

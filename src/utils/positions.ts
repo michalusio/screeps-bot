@@ -15,12 +15,16 @@ export function checkerBoard(board: Point[], white: boolean): Point[] {
 }
 
 export function toRoomPositions(board: Point[], origin: RoomPosition): RoomPosition[] {
-  return board.map(pos => new RoomPosition(origin.x + pos.x, origin.y + pos.y, origin.roomName));
+  return board
+    .filter(pos => origin.x + pos.x >= 0 && origin.y + pos.y >= 0 && origin.x + pos.x < 50 && origin.y + pos.y < 50)
+    .map(pos => new RoomPosition(origin.x + pos.x, origin.y + pos.y, origin.roomName));
 }
 
 export function toRoomPositionsWithDist(board: Point[], origin: RoomPosition): { pos: RoomPosition; dist: number }[] {
-  return board.map(pos => ({
-    pos: new RoomPosition(origin.x + pos.x, origin.y + pos.y, origin.roomName),
-    dist: pos.x * pos.x + pos.y * pos.y
-  }));
+  return board
+    .filter(pos => origin.x + pos.x >= 0 && origin.y + pos.y >= 0 && origin.x + pos.x < 50 && origin.y + pos.y < 50)
+    .map(pos => ({
+      pos: new RoomPosition(origin.x + pos.x, origin.y + pos.y, origin.roomName),
+      dist: pos.x * pos.x + pos.y * pos.y
+    }));
 }

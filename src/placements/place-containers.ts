@@ -1,5 +1,5 @@
 import { sources } from "cache/source-cache";
-import { structures } from "cache/structure-cache";
+import { mySpawns, structures } from "cache/structure-cache";
 import { Placement } from "./placement";
 
 export const placeContainers: Placement = {
@@ -12,6 +12,7 @@ export const placeContainers: Placement = {
     placeSourceContainers(room);
   }
 };
+
 function placeControllerContainer(room: Room): void {
   const controller = room.controller;
   if (!controller) return;
@@ -44,8 +45,9 @@ function placeControllerContainer(room: Room): void {
 
 function placeSourceContainers(room: Room): void {
   const sourcesList = sources(room, 1000);
+  const spawns = mySpawns(room);
   sourcesList.forEach(s => {
-    const containerPlace = minBy(s.pos.getEmptyAround(), pos => pos.getRangeTo(s));
+    const containerPlace = minBy(s.pos.getEmptyAround(), pos => _.sum(spawns, spawn => pos.getRangeTo(spawn)));
     if (
       containerPlace &&
       containerPlace.lookFor(LOOK_STRUCTURES).filter(s => s.structureType === STRUCTURE_CONTAINER).length === 0

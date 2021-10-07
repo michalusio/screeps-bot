@@ -14,7 +14,7 @@ export interface UpgraderMemory extends CreepRoleMemory {
   state: "upgrading" | "sourcing";
 }
 
-export const upgraderBody = fillBody.bind(undefined, 20, [MOVE, CARRY, WORK]);
+export const upgraderBody = fillBody.bind(undefined, 24, [MOVE, CARRY, WORK, MOVE]);
 
 export const upgraderMemory: UpgraderMemory = {
   newCreep: true,
@@ -29,14 +29,17 @@ export function upgraderBehavior(creep: Creep): void {
   switch (creepMemory.state) {
     case "sourcing":
       {
-        const source = getByIdOrNew(creepMemory.sourcePoint, energyContainerNotEmpty(upgrader));
+        const source = getByIdOrNew(creepMemory.sourcePoint, energyContainerNotEmpty(upgrader, true));
         if (!source) {
           changeState("sourcing", upgrader);
           if (Game.time % 3 === 0) upgrader.wander();
           break;
         }
         creepMemory.sourcePoint = source.id;
-        if (tryDoOrMove(() => upgrader.withdraw(source, RESOURCE_ENERGY), upgrader.travelTo(source)) !== OK) {
+        if (
+          tryDoOrMove(() => upgrader.withdraw(source, RESOURCE_ENERGY), upgrader.travelTo(source), upgrader, source) !==
+          OK
+        ) {
           changeState("sourcing", upgrader);
           upgrader.wander();
         }
@@ -50,13 +53,21 @@ export function upgraderBehavior(creep: Creep): void {
       {
         const controller = upgrader.room.controller;
         if (!controller) break;
-        if (!controller.sign) {
+        if (!controller.sign || controller.sign.text !== "MichA_I. All your base are belong to us.") {
           tryDoOrMove(
             () => upgrader.signController(controller, "MichA_I. All your base are belong to us."),
-            upgrader.travelTo(controller)
+            upgrader.travelTo(controller),
+            upgrader,
+            controller
           );
         } else {
-          tryDoOrMove(() => upgrader.upgradeController(controller), upgrader.travelTo(controller));
+          tryDoOrMove(
+            () => upgrader.upgradeController(controller),
+            upgrader.travelTo(controller, undefined, { range: 1 }),
+            upgrader,
+            controller,
+            2
+          );
         }
         if (upgrader.store.getUsedCapacity(RESOURCE_ENERGY) <= 0) {
           changeState("sourcing", upgrader);

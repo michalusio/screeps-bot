@@ -1,4 +1,5 @@
 import { mySpawns } from "cache/structure-cache";
+import { EXTENSION_PLACEMENT_RANGE_SIZE } from "configs";
 import { log } from "utils/log";
 import { checkerBoard, deltaAround, toRoomPositionsWithDist } from "utils/positions";
 
@@ -14,8 +15,6 @@ const extensionsToRcl = {
   [60]: 8
 };
 
-const rangeSize = 6;
-
 export const extensionPlacer: (n: 5 | 10 | 20 | 30 | 40 | 50 | 60) => Placement = (
   n: 5 | 10 | 20 | 30 | 40 | 50 | 60
 ) => ({
@@ -30,8 +29,8 @@ export const extensionPlacer: (n: 5 | 10 | 20 | 30 | 40 | 50 | 60) => Placement 
       room.find(FIND_MY_STRUCTURES).filter(s => s.structureType === "extension").length -
       room.find(FIND_MY_CONSTRUCTION_SITES).filter(s => s.structureType === "extension").length;
 
-    const positions: { pos: RoomPosition; dist: number }[] = mySpawns(room, 50)
-      .flatMap(s => toRoomPositionsWithDist(checkerBoard(deltaAround(rangeSize, 1), false), s.pos))
+    const positions: { pos: RoomPosition; dist: number }[] = mySpawns(room)
+      .flatMap(s => toRoomPositionsWithDist(checkerBoard(deltaAround(EXTENSION_PLACEMENT_RANGE_SIZE, 1), false), s.pos))
       .filter(a => a.pos.isEmpty() && a.pos.canBuild());
 
     if (toTake > 0) {

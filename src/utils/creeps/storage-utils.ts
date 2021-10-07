@@ -1,18 +1,10 @@
-import { freeEnergyContainers, mySpawns, nonEmptyEnergyContainers } from "cache/structure-cache";
-
-const fillPriority = {
-  spawn: 1,
-  extension: 2,
-  storage: 3,
-  container: 4
-};
-
-const emptyPriority = {
-  spawn: 4,
-  extension: 3,
-  storage: 2,
-  container: 2
-};
+import {
+  freeEnergyContainers,
+  mySpawns,
+  energyStorages,
+  energyStoragesWithoutSourcedCache
+} from "cache/structure-cache";
+import { EMPTY_PRIORITY, FILL_PRIORITY } from "configs";
 
 type PerRoomNotEmptyContainerCache = {
   value: [(StructureContainer | StructureStorage)[], (StructureContainer | StructureStorage)[]];
@@ -22,7 +14,8 @@ type PerRoomNotEmptyContainerCache = {
 const notEmptyContainerCache: { [room: string]: PerRoomNotEmptyContainerCache } = {};
 
 export function energyContainerNotEmpty(
-  creep: Creep
+  creep: Creep,
+  omitSourceContainers = false
 ): () => StructureContainer | StructureStorage | StructureSpawn | undefined {
   return () => {
     if (!notEmptyContainerCache[creep.room.name]) {
@@ -30,7 +23,9 @@ export function energyContainerNotEmpty(
     }
     const notEmptyCache = notEmptyContainerCache[creep.room.name];
     if (notEmptyCache.time !== Game.time) {
-      notEmptyCache.value[0] = nonEmptyEnergyContainers(creep.room, 0);
+      notEmptyCache.value[0] = omitSourceContainers
+        ? energyStoragesWithoutSourcedCache(creep.room, 100)
+        : energyStorages(creep.room);
       notEmptyCache.value[1] = notEmptyCache.value[0].filter(s => s.store.getUsedCapacity(RESOURCE_ENERGY) > 200);
       notEmptyCache.time = Game.time;
     }
@@ -39,7 +34,7 @@ export function energyContainerNotEmpty(
     return (
       minBy(withEnergy, emptyByStructureTypeThenRange(creep)) ??
       (filtered.length === 0
-        ? _.sample(mySpawns(creep.room, 50).filter(s => s.store.getUsedCapacity(RESOURCE_ENERGY) > 200))
+        ? _.sample(mySpawns(creep.room).filter(s => s.store.getUsedCapacity(RESOURCE_ENERGY) > 200))
         : undefined)
     );
   };
@@ -71,11 +66,11 @@ export function energyContainerNotFull(
 function fillByStructureTypeThenRange(
   creep: Creep
 ): (s: StructureContainer | StructureStorage | StructureExtension | StructureSpawn) => number {
-  return s => fillPriority[s.structureType] * 10000 + s.pos.getRangeTo(creep.pos);
+  return s => FILL_PRIORITY[s.structureType] * 10000 + s.pos.getRangeTo(creep.pos);
 }
 
 function emptyByStructureTypeThenRange(
   creep: Creep
 ): (s: StructureContainer | StructureStorage | StructureExtension | StructureSpawn) => number {
-  return s => emptyPriority[s.structureType] * 10000 + s.pos.getRangeTo(creep.pos);
+  return s => EMPTY_PRIORITY[s.structureType] * 10000 + s.pos.getRangeTo(creep.pos);
 }

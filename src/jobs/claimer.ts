@@ -1,5 +1,6 @@
 import { getPathFromCache } from "cache/path-cache";
 import { sources } from "cache/source-cache";
+import { NEW_COLONY_SPAWN_SIZE } from "configs";
 import { CreepRemoteMemory, tryDoOrMove } from "utils/creeps";
 import { ScoutData } from "utils/declarations";
 import { log } from "utils/log";
@@ -50,7 +51,16 @@ export function claimerBehavior(creep: Creep): void {
               }
             }
           }
-          tryDoOrMove(() => claimer.claimController(controller), claimer.travelTo(controller));
+          if (
+            tryDoOrMove(
+              () => claimer.claimController(controller),
+              claimer.travelTo(controller),
+              claimer,
+              controller
+            ) === ERR_GCL_NOT_ENOUGH
+          ) {
+            tryDoOrMove(() => claimer.reserveController(controller), claimer.travelTo(controller), claimer, controller);
+          }
         } else {
           log(`Claimer ${claimer.name} cannot claim the room as it doesn't have the controller!`);
         }
@@ -169,7 +179,7 @@ export function placeInitialSpawn(room: Room): RoomPosition | null {
     perRoomSubs.set(room.name, subs);
   }
   _.forEach(subs, (value, index) => {
-    if (value > 5) {
+    if (value > NEW_COLONY_SPAWN_SIZE) {
       const iIndex = index as unknown as number;
       const x = Math.floor(iIndex / 50);
       const y = iIndex % 50;
@@ -179,11 +189,11 @@ export function placeInitialSpawn(room: Room): RoomPosition | null {
   const stuff = [...sources(room, 1000), ...(room.controller ? [room.controller] : [])];
   const points = _.filter(
     _.map(subs, (v, pos) => [pos, v] as unknown as [number, number]),
-    s => s[1] > 5
+    s => s[1] > NEW_COLONY_SPAWN_SIZE
   ).map(pos => [Math.floor(pos[0] / 50), pos[0] % 50, Math.floor(pos[1] / 2)] as [number, number, number]);
   const spawnPoint = minBy(points, p =>
     stuff.reduce(
-      (acc, s) => acc + getPathFromCache(s.pos, new RoomPosition(p[0] - p[2], p[1] - p[2], room.name), room).length,
+      (acc, s) => acc + getPathFromCache(s.pos, new RoomPosition(p[0] - p[2], p[1] - p[2], room.name)).length,
       Math.abs(p[0] - 25) + Math.abs(p[1] - 25) - p[2] * 5
     )
   );

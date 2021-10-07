@@ -6,6 +6,7 @@ import { conquistadoresBehavior, conquistadoresBody, conquistadoresMemory } from
 import { defenderBehavior, defenderBody, defenderMemory } from "./defender";
 import { haulerBehavior, haulerBody, haulerMemory } from "./hauler";
 import { minerBehavior, minerBody, minerMemory } from "./miner";
+import { attackerBehavior, attackerBody, attackerMemory } from "./offence/attacker";
 import { remoteMinerBehavior, remoteMinerBody, remoteMinerMemory } from "./remote-miner";
 import { sacrificeBehavior } from "./sacrifice";
 import { scoutBehavior, scoutBody, scoutMemory } from "./scout";
@@ -29,6 +30,8 @@ export const roleUtilities: Roles = {
   scout: [scoutBody, scoutMemory, scoutBehavior],
   claimer: [claimerBody, claimerMemory, claimerBehavior],
   conquistadores: [conquistadoresBody, conquistadoresMemory, conquistadoresBehavior],
+
+  attacker: [attackerBody, attackerMemory, attackerBehavior],
 
   sacrifice: [
     (): BodyPartConstant[] => [],
