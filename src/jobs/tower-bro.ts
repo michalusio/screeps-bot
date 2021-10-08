@@ -55,7 +55,7 @@ export function towerbroBehavior(creep: Creep): void {
     case "storing":
       {
         const placeToManage = getByIdOrNew(creepMemory.managePoint, () =>
-          minBy(towersSpawnContainers(towerbro.room, 50), t => t.store.getUsedCapacity(RESOURCE_ENERGY))
+          minBy(towersSpawnContainers(towerbro.room, 10), t => t.store.getUsedCapacity(RESOURCE_ENERGY))
         );
         if (!placeToManage) {
           changeState("storing", towerbro);

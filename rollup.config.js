@@ -2,8 +2,7 @@ import commonjs from '@rollup/plugin-commonjs';
 import resolve from '@rollup/plugin-node-resolve';
 import clear from 'rollup-plugin-clear';
 import screeps from 'rollup-plugin-screeps';
-import typescript from 'rollup-plugin-typescript2';
-import jscc from 'rollup-plugin-jscc';
+import typescript from '@rollup/plugin-typescript';
 
 ("use strict");
 
@@ -20,15 +19,14 @@ export default {
   output: {
     file: "dist/main.js",
     format: "cjs",
-    sourcemap: true
+    sourcemap: false
   },
 
   plugins: [
     clear({ targets: ["dist"] }),
-    resolve({ rootDir: "src" }),
-    jscc({ values: { _PROFILER: 0 } }),
+    resolve({ rootDir: "src", extensions: [".ts", ".js"] }),
+    typescript({tsconfig: "./tsconfig.json", cacheDir: './.rollup.tscache', }),
     commonjs(),
-    typescript({tsconfig: "./tsconfig.json"}),
     screeps({config: cfg, dryRun: cfg == null})
   ]
 }

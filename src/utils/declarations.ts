@@ -44,7 +44,7 @@ declare global {
     scoutData: { [key: string]: ScoutData };
     afterReset: boolean;
     spawnVisualizer: string[];
-    timings: { [time: number]: { [key: string]: number } };
+    timings: { [key: string]: number };
     stats: {
       gcl: {
         level: number;
@@ -83,6 +83,12 @@ declare global {
         [role: string]: { count: number; time: number };
       };
       cacheHits: {
+        [key: string]: {
+          hits: number;
+          cpu: number;
+        };
+      };
+      timings: {
         [key: string]: number;
       };
     };

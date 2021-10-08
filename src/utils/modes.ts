@@ -7,7 +7,6 @@ import { roadsBetweenSources } from "placements/roads-between-sources";
 import { roadsToController } from "placements/roads-to-controller";
 import { roadsToExits } from "placements/roads-to-exits";
 import { roadsToSources } from "placements/roads-to-sources";
-import { spawnPlaza } from "placements/spawn-plaza";
 import { link, storage } from "placements/storage-and-link";
 import { canClaim } from "placements/can-claim";
 import { constructionSites, freeEnergyContainers, mySpawns } from "cache/structure-cache";
@@ -40,10 +39,10 @@ export const Bootstrap = {
       { roles: { miner: 2, hauler: 2, upgrader: 1 } },
       { roles: { defender: 1 } },
       { roles: { upgrader: 2, builder: builderMod }, structures: [rcl(2), extensionPlacer(5)] },
-      { roles: { builder: 2 * builderMod, remoteminer: 1 }, structures: [roadsToSources, roadsBetweenSources] },
-      { roles: { towerbro: 1 }, structures: [roadsToController, spawnPlaza, rcl(3), extensionPlacer(10)] },
+      { roles: { builder: 2 * builderMod, remoteminer: 1 }, structures: [roadsToSources, placeContainers] },
+      { roles: { towerbro: 1 }, structures: [roadsToController, rcl(3), extensionPlacer(10)] },
       { roles: {}, structures: [placeTower(1)] },
-      { roles: { remoteminer: 2 }, structures: [placeContainers] },
+      { roles: { remoteminer: 2 }, structures: [roadsBetweenSources] },
       { roles: { remoteminer: 4, upgrader: 3 }, structures: [roadsToExits, rcl(4), extensionPlacer(20)] },
       { roles: { remoteminer: 6, scout: 1 }, structures: [storage, placeTower(2), rcl(5), link, extensionPlacer(30)] }
     ];
@@ -54,7 +53,7 @@ const bootstrapRoles = (room: Room) => {
   const level = room.controller?.level ?? -1;
   const builderMod = constructionSites(room, 50).length > 0 ? 2 : 0;
   const miningMod = freeEnergyContainers(room, 0).length > 0 ? 1 : 0;
-  const energyLayingAroundMod = Math.floor(_.sum(droppedEnergy(room, 1), e => e.amount) / 500);
+  const energyLayingAroundMod = Math.min(2, Math.floor(_.sum(droppedEnergy(room, 1), e => e.amount) / 750));
   const upgraderMod = level !== 8 ? 2 : 1;
   return {
     defender: 1,
@@ -71,11 +70,10 @@ const bootstrapRoles = (room: Room) => {
 const bootstrapStructures = [
   rcl(2),
   roadsToSources,
-  roadsBetweenSources,
-  roadsToController,
-  spawnPlaza,
-  rcl(3),
   placeContainers,
+  roadsToController,
+  rcl(3),
+  roadsBetweenSources,
   roadsToExits,
   rcl(4),
   storage,
@@ -171,7 +169,7 @@ export const Idling = {
         roles: bootstrapRoles(room),
         structures: bootstrapStructures
       },
-      { roles: { scout: 3, upgrader: 4 }, structures: [rcl(7)] }
+      { roles: { scout: 3, upgrader: 4 }, structures: [extensionPlacer(40), rcl(7), extensionPlacer(50)] }
     ];
   }
 };

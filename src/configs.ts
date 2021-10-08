@@ -55,8 +55,5 @@ export const EMPTY_PRIORITY = {
 };
 
 export const PLACEMENT_CACHE_TIME = 10;
-export const EXTENSION_PLACEMENT_RANGE_SIZE = 8;
-export const ROAD_PLAZA_SIZE = 5;
-export const SPAWN_ACTIVE_AREA = Math.min(EXTENSION_PLACEMENT_RANGE_SIZE, ROAD_PLAZA_SIZE);
-
+export const USABLE_SPAWN_AREA = 4;
 export const NEW_COLONY_SPAWN_SIZE = 6;

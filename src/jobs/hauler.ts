@@ -29,6 +29,7 @@ export const haulerMemory: HaulerMemory = {
   energyPoint: undefined,
   storagePoint: undefined,
   containerPoint: undefined,
+  tombPoint: undefined,
   waitedForStuff: 0,
   state: "getting"
 };
@@ -77,19 +78,19 @@ export function haulerBehavior(creep: Creep): void {
           switch (type) {
             case "droppedEnergy":
               {
-                const resource = getByIdOrNew(creepMemory.energyPoint, findNewResource(hauler));
-                if (resource) {
-                  creepMemory.energyPoint = resource.id;
+                const energy = getByIdOrNew(creepMemory.energyPoint, findNewResource(hauler));
+                if (energy) {
+                  creepMemory.energyPoint = energy.id;
                   tryDoOrMove(
-                    () => hauler.pickup(resource),
-                    hauler.travelTo(resource, avoidSources, { ignoreCreeps: true }),
+                    () => hauler.pickup(energy),
+                    hauler.travelTo(energy, avoidSources, { ignoreCreeps: true }),
                     hauler,
-                    resource
+                    energy
                   );
-                  if (hauler.pos.isNearTo(resource)) creepMemory.waitedForStuff++;
+                  if (hauler.pos.isNearTo(energy)) creepMemory.waitedForStuff++;
                   checkIfFull(hauler);
                   return;
-                }
+                } else creepMemory.energyPoint = undefined;
               }
               break;
             case "tombstone":
@@ -106,7 +107,7 @@ export function haulerBehavior(creep: Creep): void {
                   if (hauler.pos.isNearTo(tombstone)) creepMemory.waitedForStuff++;
                   checkIfFull(hauler);
                   return;
-                }
+                } else creepMemory.tombPoint = undefined;
               }
               break;
             case "container":
@@ -128,7 +129,7 @@ export function haulerBehavior(creep: Creep): void {
                   if (hauler.pos.isNearTo(container)) creepMemory.waitedForStuff++;
                   checkIfFull(hauler);
                   return;
-                }
+                } else creepMemory.containerPoint = undefined;
               }
               break;
           }

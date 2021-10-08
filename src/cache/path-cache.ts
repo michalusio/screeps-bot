@@ -1,6 +1,6 @@
 import { cacheForKey, cacheForRoom, cacheForStruct, RoomCache } from "./cache-util";
-import { creepMyAndPositions } from "./creep-cache";
-import { mySpawns, structures } from "./structure-cache";
+import { costMatrixCache } from "./cost-matrix";
+import { mySpawns } from "./structure-cache";
 
 type PathKey = `${number} ${number}|${number} ${number}|${string}${boolean}${boolean}`;
 
@@ -30,17 +30,19 @@ const pathsCache = cacheForStruct<PathDataWithKey, RoomPosition[]>(
         roomCallback: roomName => costMatrixCache(`${roomName}|${struct.ignoreRoads}|${struct.ignoreCreeps}`, 13)
       }
     ).path;
+
+    const data: PathData = {
+      aPos: struct.aPos,
+      bPos: struct.bPos,
+      ignoreCreeps: struct.ignoreCreeps,
+      ignoreRoads: struct.ignoreRoads,
+      range: struct.range,
+      visualizePathStyle: undefined
+    };
     for (let i = 0; i < path.length - 1; i++) {
       const pos = path[i];
       const partPath = path.slice(i + 1);
-      const data: PathData = {
-        aPos: pos,
-        bPos: struct.bPos,
-        ignoreCreeps: struct.ignoreCreeps,
-        ignoreRoads: struct.ignoreRoads,
-        range: struct.range,
-        visualizePathStyle: undefined
-      };
+      data.aPos = pos;
       pathsCache.set({ ...data, key: key(data) }, partPath);
     }
     return path;
@@ -52,7 +54,7 @@ export function getPathFromCache(
   a: RoomPosition | _HasRoomPosition,
   b: RoomPosition | _HasRoomPosition,
   options: MoveToOpts = {
-    ignoreRoads: true,
+    ignoreRoads: false,
     ignoreCreeps: true,
     range: 1,
     visualizePathStyle: undefined
@@ -64,16 +66,13 @@ export function getPathFromCache(
   const data: PathData = {
     aPos,
     bPos,
-    ignoreRoads: options.ignoreRoads ?? true,
+    ignoreRoads: options.ignoreRoads ?? false,
     ignoreCreeps: options.ignoreCreeps ?? true,
     range: options.range ?? 1
   };
-  let path = pathsCache({ ...data, key: key(data) }, 100);
-  if (path.some(p => !p.isEmpty() && !p.hasRoad())) {
-    path = pathsCache({ ...data, key: key(data) }, 7);
-  }
+  const path = pathsCache({ ...data, key: key(data) }, 7);
   if (options.visualizePathStyle) {
-    new RoomVisual(aPos.roomName).poly(path, {
+    new RoomVisual(aPos.roomName).poly([aPos, ...path], {
       lineStyle: "dashed",
       strokeWidth: 0.2,
       ...options.visualizePathStyle
@@ -81,52 +80,6 @@ export function getPathFromCache(
   }
   return path;
 }
-
-const costMatrixTerrainCache = cacheForKey("cost matrix terrain", roomName => {
-  const matrix = new PathFinder.CostMatrix();
-  const terrain = Game.map.getRoomTerrain(roomName);
-  for (let x = 0; x < 50; x++) {
-    for (let y = 0; y < 50; y++) {
-      switch (terrain.get(x, y)) {
-        case TERRAIN_MASK_WALL:
-          matrix.set(x, y, 255);
-          break;
-        case TERRAIN_MASK_SWAMP:
-          matrix.set(x, y, 10);
-          break;
-        case 0:
-          matrix.set(x, y, 2);
-          break;
-      }
-    }
-  }
-  return matrix;
-});
-export const costMatrixCache = cacheForKey("cost matrix", (data: `${string}|${boolean}|${boolean}`) => {
-  const [roomName, ignoreRoads, ignoreCreeps] = data.split("|");
-  const matrix = costMatrixTerrainCache(roomName, 999999).clone();
-  if (!Game.rooms[roomName]) return matrix;
-  const room = Game.rooms[roomName];
-  if (ignoreCreeps === "false") {
-    creepMyAndPositions(room, 7).forEach(c => {
-      if (c.my) matrix.set(c.pos.x, c.pos.y, 100);
-      else c.pos.getAround(2).forEach(pos => matrix.set(pos.x, pos.y, 254));
-    });
-  }
-  structures(room, 31).forEach(s => {
-    if (s.structureType === STRUCTURE_ROAD) {
-      if (ignoreRoads === "false" && matrix.get(s.pos.x, s.pos.y) < 50) {
-        // Favor roads over plain tiles
-        matrix.set(s.pos.x, s.pos.y, 1);
-      }
-    } else if (s.structureType !== STRUCTURE_CONTAINER && (s.structureType !== STRUCTURE_RAMPART || !s.my)) {
-      // Can't walk through non-walkable buildings
-      matrix.set(s.pos.x, s.pos.y, 255);
-    }
-  });
-
-  return matrix;
-});
 
 function getDirectionExitFor<T extends ExitConstant>(
   room: Room,

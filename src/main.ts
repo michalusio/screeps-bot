@@ -1,8 +1,3 @@
-//#if _PROFILER
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-//@ts-ignore
-import profiler from "external/screeps-profiler";
-//#endif
 import { initMemHack } from "memhack";
 import { injectMethods } from "utils/declarations";
 import {
@@ -18,17 +13,13 @@ import {
 import { Bitmap, Color } from "external/console-bitmap";
 import { mySpawns } from "cache/structure-cache";
 import { tryDo } from "try-do";
-import { cache, cacheHits } from "cache/cache-util";
+import { cacheHits } from "cache/cache-util";
 
 let creepActionsTimings: { [role: string]: [number, number] } = {};
 
 injectMethods();
 
-//#if _PROFILER
-profiler.enable();
-//#else
 initMemHack();
-//#endif
 
 const body = () => {
   try {
@@ -61,26 +52,13 @@ if (!Memory.visuals) {
 if (!Memory.scoutData) {
   Memory.scoutData = {};
 }
-if (!Memory.timings) {
-  Memory.timings = {};
-}
 Memory.afterReset = true;
 
 export const loop = (): void => {
-  Object.keys(cacheHits).forEach(key => (cacheHits[key] = 0));
-  //#if _PROFILER
-  profiler.wrap(body);
-  //#else
-  //consoleVisualizer();
+  Memory.timings = {};
+  Object.keys(cacheHits).forEach(key => (cacheHits[key] = { hits: 0, cpu: 0 }));
   body();
   grafana();
-  //#endif
-
-  //#if _PROFILER
-  Object.keys(Memory.timings)
-    .filter(t => +t <= Game.time - 100)
-    .forEach(t => delete Memory.timings[+t]);
-  //#endif
   Memory.afterReset = false;
 };
 
@@ -92,7 +70,8 @@ function grafana(): void {
     energy: { limit: 0, value: 0 },
     room: {},
     creep: {},
-    cacheHits: {}
+    cacheHits: {},
+    timings: {}
   };
   Object.keys(creepActionsTimings).forEach(
     creepName =>
@@ -146,6 +125,7 @@ function grafana(): void {
   }
 
   Memory.stats.cacheHits = cacheHits;
+  Memory.stats.timings = Memory.timings;
 }
 
 const bitmapCache = new Map<string, Bitmap>();

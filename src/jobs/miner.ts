@@ -16,7 +16,7 @@ export interface MinerMemory extends CreepRoleMemory {
   state: "mining";
 }
 
-export const minerBody = fillBody.bind(undefined, 6, [WORK, MOVE, WORK, WORK, WORK, WORK]);
+export const minerBody = fillBody.bind(undefined, 7, [WORK, MOVE, WORK, WORK, MOVE, WORK, WORK]);
 
 export const minerMemory: MinerMemory = {
   newCreep: true,

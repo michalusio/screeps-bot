@@ -1,7 +1,6 @@
 import { mySpawns } from "cache/structure-cache";
-import { EXTENSION_PLACEMENT_RANGE_SIZE } from "configs";
 import { log } from "utils/log";
-import { checkerBoard, deltaAround, toRoomPositionsWithDist } from "utils/positions";
+import { extensionStar } from "utils/structures/extension-star";
 
 import { Placement } from "./placement";
 
@@ -29,18 +28,24 @@ export const extensionPlacer: (n: 5 | 10 | 20 | 30 | 40 | 50 | 60) => Placement 
       room.find(FIND_MY_STRUCTURES).filter(s => s.structureType === "extension").length -
       room.find(FIND_MY_CONSTRUCTION_SITES).filter(s => s.structureType === "extension").length;
 
-    const positions: { pos: RoomPosition; dist: number }[] = mySpawns(room)
-      .flatMap(s => toRoomPositionsWithDist(checkerBoard(deltaAround(EXTENSION_PLACEMENT_RANGE_SIZE, 1), false), s.pos))
-      .filter(a => a.pos.isEmpty() && a.pos.canBuild());
-
     if (toTake > 0) {
       log(`Placing ${toTake} extensions`);
-      _.take(
-        _.sortBy(positions, p => p.dist),
-        toTake
-      )
-        .map(p => p.pos)
-        .forEach(p => p.createConstructionSite(STRUCTURE_EXTENSION));
+      const stars: RoomPosition[] = [];
+      for (let x = 3; x < 47; x++) {
+        for (let y = 3; y < 47; y++) {
+          const pos = new RoomPosition(x, y, room.name);
+          if (extensionStar.canPlaceAt(pos)) {
+            stars.push(pos);
+          }
+        }
+      }
+      const spawns = mySpawns(room);
+      const starPosition = minBy(stars, pos => _.sum(spawns, s => pos.getRangeTo(s)));
+      if (starPosition) {
+        extensionStar.placeAt(starPosition);
+      } else {
+        console.log("No star position found");
+      }
     }
   }
 });

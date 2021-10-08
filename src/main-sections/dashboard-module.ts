@@ -1,5 +1,6 @@
-import { directionExitsFromSpawn } from "cache/path-cache";
+import { mySpawns } from "cache/structure-cache";
 import { getAllure, placeInitialSpawn } from "jobs/claimer";
+import { extensionStar } from "utils/structures/extension-star";
 import { messages, pruneLogs } from "../utils/log";
 import { CreepCounter } from "./creep-counting";
 import { civilizationEnergyLevel } from "./stages";
@@ -16,13 +17,6 @@ export function logging(creepCount: CreepCounter): void {
   let roles: string[] = [];
   creepCount.forEach(roomCounter => (roles = _.union(roles, _.keys(roomCounter.perRole))));
   roles.sort();
-
-  Object.keys(Game.rooms).forEach(roomName => {
-    const visual = Game.rooms[roomName].visual;
-    directionExitsFromSpawn(Game.rooms[roomName], 5).forEach(e => {
-      visual.circle(e[1].x, e[1].y, { fill: "red" });
-    });
-  });
 
   creepCount.forEach((_, roomName) => {
     const room = Game.rooms[roomName];
@@ -327,5 +321,21 @@ function showSpawnVisuals() {
     if (place) {
       Game.rooms[room].visual.circle(place.x, place.y, { opacity: 1, fill: "blue" });
     }
+    const stars: RoomPosition[] = [];
+    for (let x = 3; x < 47; x++) {
+      for (let y = 3; y < 47; y++) {
+        if (extensionStar.canPlaceAt(new RoomPosition(x, y, room))) {
+          stars.push(new RoomPosition(x, y, room));
+        }
+      }
+    }
+    const spawns = mySpawns(Game.rooms[room]);
+    const sortedStars = _.sortBy(stars, pos => _.sum(spawns, s => pos.getRangeTo(s)));
+    sortedStars.forEach((s, index) => {
+      Game.rooms[room].visual.circle(s.x, s.y, {
+        opacity: 1 - index / sortedStars.length,
+        fill: "red"
+      });
+    });
   });
 }

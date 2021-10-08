@@ -6,11 +6,8 @@ export function tryDo<T>(fn: (...args: any[]) => T, ...args: unknown[]): T | voi
   try {
     const cpuBefore = Game.cpu.getUsed();
     const result = fn(...args);
-    //#if _PROFILER
     if (!Memory.timings) Memory.timings = {};
-    if (!Memory.timings[Game.time]) Memory.timings[Game.time] = {};
-    Memory.timings[Game.time][fn.name] = (Memory.timings[Game.time][fn.name] ?? 0) + Game.cpu.getUsed() - cpuBefore;
-    //#endif
+    Memory.timings[fn.name] = (Memory.timings[fn.name] ?? 0) + Game.cpu.getUsed() - cpuBefore;
     return result;
   } catch (e) {
     console.log(`Error encountered at ${fn.name}:`);
