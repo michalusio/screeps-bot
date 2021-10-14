@@ -1,6 +1,6 @@
 import { structuresNotPlaced } from "cache/stage-cache";
 import { mySpawns } from "cache/structure-cache";
-import { PLACEMENT_CACHE_TIME } from "configs";
+import { CIVILIZATION_MINIMUM_SPAWN_ENERGY, CIVILIZATION_STAGE_MODIFIER, PLACEMENT_CACHE_TIME } from "configs";
 import { defenderBody, defenderMemory } from "jobs/defender";
 import { minerBody, minerMemory } from "jobs/miner";
 import { roleUtilities } from "jobs/role-utilities";
@@ -47,7 +47,7 @@ export function wrapWithStages(loop: (creepCount: CreepCounter) => void): (creep
       if (!room.memory.orders) {
         room.memory.orders = {};
       }
-      if (performOrders(room)) return;
+      if (performSpawnOrders(room)) return;
 
       //
       const mode = modes[room.memory.mode];
@@ -97,7 +97,9 @@ export function wrapWithStages(loop: (creepCount: CreepCounter) => void): (creep
 }
 
 export function civilizationEnergyLevel(civilizationLevel: number | undefined): number {
-  return Math.max(200, 200 + Math.floor((civilizationLevel ?? 0) * 50));
+  return (
+    CIVILIZATION_MINIMUM_SPAWN_ENERGY + Math.floor(Math.max(0, civilizationLevel ?? 0) * CIVILIZATION_STAGE_MODIFIER)
+  );
 }
 
 function spawnRequirement(spawn: StructureSpawn, requirements: RoleRequirements): void {
@@ -188,7 +190,7 @@ function getNextStageDelta(
   ];
 }
 
-function performOrders(room: Room) {
+function performSpawnOrders(room: Room) {
   const orders = room.memory.orders;
   if (orders && Object.keys(orders).length > 0) {
     Object.keys(orders).forEach(orderRole => {

@@ -4,7 +4,7 @@ import {
   energyStorages,
   energyStoragesWithoutSourcedCache
 } from "cache/structure-cache";
-import { EMPTY_PRIORITY, FILL_PRIORITY } from "configs";
+import { EMPTY_PRIORITY, ENERGY_NOT_EMPTY_MARK, FILL_PRIORITY } from "configs";
 
 type PerRoomNotEmptyContainerCache = {
   value: [(StructureContainer | StructureStorage)[], (StructureContainer | StructureStorage)[]];
@@ -26,7 +26,9 @@ export function energyContainerNotEmpty(
       notEmptyCache.value[0] = omitSourceContainers
         ? energyStoragesWithoutSourcedCache(creep.room, 100)
         : energyStorages(creep.room);
-      notEmptyCache.value[1] = notEmptyCache.value[0].filter(s => s.store.getUsedCapacity(RESOURCE_ENERGY) > 200);
+      notEmptyCache.value[1] = notEmptyCache.value[0].filter(
+        s => s.store.getUsedCapacity(RESOURCE_ENERGY) > ENERGY_NOT_EMPTY_MARK
+      );
       notEmptyCache.time = Game.time;
     }
     const filtered = notEmptyCache.value[0];
@@ -34,7 +36,7 @@ export function energyContainerNotEmpty(
     return (
       minBy(withEnergy, emptyByStructureTypeThenRange(creep)) ??
       (filtered.length === 0
-        ? _.sample(mySpawns(creep.room).filter(s => s.store.getUsedCapacity(RESOURCE_ENERGY) > 200))
+        ? _.sample(mySpawns(creep.room).filter(s => s.store.getUsedCapacity(RESOURCE_ENERGY) > ENERGY_NOT_EMPTY_MARK))
         : undefined)
     );
   };

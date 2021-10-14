@@ -1,5 +1,6 @@
 import { exits, getPathFromCache } from "cache/path-cache";
 import { extensionsToSpawnFrom } from "cache/structure-cache";
+import { BODYPART_PRIORITY } from "configs";
 import { AttackerMemory } from "jobs/offence/attacker";
 import { RemoteMinerMemory } from "jobs/remote-miner";
 import { MoveToReturnCode } from "./creeps";
@@ -7,13 +8,15 @@ import { MoveToReturnCode } from "./creeps";
 import { CreepRoleMemory } from "./creeps/role-memory";
 import { log } from "./log";
 
-const BODYPART_PRIORITY: { [key: string]: number } = {
-  [TOUGH]: 0,
-  [WORK]: 1,
-  [CARRY]: 2,
-  [MOVE]: 3,
-  [ATTACK]: 4
-};
+const treatedAsFreeType: LookConstant[] = [
+  LOOK_CREEPS,
+  LOOK_ENERGY,
+  LOOK_RESOURCES,
+  LOOK_FLAGS,
+  LOOK_TOMBSTONES,
+  LOOK_RUINS,
+  LOOK_POWER_CREEPS
+];
 
 export interface ScoutData {
   roomName: string;
@@ -28,9 +31,9 @@ export interface ScoutData {
   wallRatio: number;
 }
 
-function splitRoomName(name: string): [string, string, string, string] {
-  const split = /([WE])(\d+)([NS])(\d+)/.exec(name);
-  return split ? [split[1], split[2], split[3], split[4]] : ["W", "0", "N", "0"];
+function splitRoomName(name: string): [string, string, string, string] | null {
+  const split = /^([WE])(\d+)([NS])(\d+)$/.exec(name);
+  return split ? [split[1], split[2], split[3], split[4]] : null;
 }
 
 declare global {
@@ -43,7 +46,7 @@ declare global {
     visuals: boolean;
     scoutData: { [key: string]: ScoutData };
     afterReset: boolean;
-    spawnVisualizer: string[];
+    visualizer: string[];
     timings: { [key: string]: number };
     stats: {
       gcl: {
@@ -166,7 +169,9 @@ declare global {
   }
 
   interface Room {
-    getRoomNameOnSide(side: ExitConstant): string;
+    getRoomNameOnSide(side: ExitConstant): string | null;
+    createConstructionSiteIfEmpty(x: number, y: number, type: BuildableStructureConstant): ScreepsReturnCode;
+    createConstructionSiteForced(x: number, y: number, type: BuildableStructureConstant): ScreepsReturnCode;
   }
 
   // eslint-disable-next-line no-var
@@ -180,7 +185,7 @@ declare global {
   function order(roomName: string, role: string, howMany: number): void;
   function rally(color: ColorConstant, howMany: number): void;
   function minBy<T>(collection: T[], iteratee?: (val: T) => number): T | undefined;
-  function getRoomNameOnSide(name: string, side: ExitConstant): string;
+  function getRoomNameOnSide(name: string, side: ExitConstant): string | null;
   function showSpawnFor(room: string): void;
 }
 
@@ -191,8 +196,8 @@ export function injectMethods(): void {
   };
 
   global.showSpawnFor = function (room: string): void {
-    if (!Memory.spawnVisualizer) Memory.spawnVisualizer = [];
-    Memory.spawnVisualizer.push(room);
+    if (!Memory.visualizer) Memory.visualizer = [];
+    Memory.visualizer.push(room);
   };
 
   global.clear = function (): void {
@@ -233,8 +238,9 @@ export function injectMethods(): void {
     }
   };
 
-  global.getRoomNameOnSide = function (name: string, side: ExitConstant): string {
+  global.getRoomNameOnSide = function (name: string, side: ExitConstant): string | null {
     const parts = splitRoomName(name);
+    if (!parts) return null;
     const we = parts[0] + parts[1];
     const ns = parts[2] + parts[3];
     switch (side) {
@@ -281,52 +287,31 @@ export function injectMethods(): void {
     }
   };
 
-  Room.prototype.getRoomNameOnSide = function (side: ExitConstant): string {
-    const parts = this.name.split("");
-    const we = parts[0] + parts[1];
-    const ns = parts[2] + parts[3];
-    switch (side) {
-      case 1:
-        if (parts[2] === "S") {
-          if (parts[3] === "0") {
-            return we + "N0";
-          } else {
-            return we + "S" + (parseInt(parts[3]) - 1).toString();
-          }
-        } else {
-          return we + "N" + (parseInt(parts[3]) + 1).toString();
-        }
-      case 3:
-        if (parts[0] === "W") {
-          if (parts[1] === "0") {
-            return "E0" + ns;
-          } else {
-            return "W" + (parseInt(parts[1]) - 1).toString() + ns;
-          }
-        } else {
-          return "E" + (parseInt(parts[1]) + 1).toString() + ns;
-        }
-      case 5:
-        if (parts[2] === "N") {
-          if (parts[3] === "0") {
-            return we + "S0";
-          } else {
-            return we + "N" + (parseInt(parts[3]) - 1).toString();
-          }
-        } else {
-          return we + "S" + (parseInt(parts[3]) + 1).toString();
-        }
-      case 7:
-        if (parts[0] === "E") {
-          if (parts[1] === "0") {
-            return "W0" + ns;
-          } else {
-            return "E" + (parseInt(parts[1]) - 1).toString() + ns;
-          }
-        } else {
-          return "W" + (parseInt(parts[1]) + 1).toString() + ns;
-        }
+  Room.prototype.getRoomNameOnSide = function (side: ExitConstant): string | null {
+    return global.getRoomNameOnSide(this.name, side);
+  };
+
+  Room.prototype.createConstructionSiteIfEmpty = function (
+    x: number,
+    y: number,
+    structureType: BuildableStructureConstant
+  ): ScreepsReturnCode {
+    if (
+      this.lookAt(x, y).every(l => (l.type === "terrain" && l.terrain !== "wall") || treatedAsFreeType.includes(l.type))
+    ) {
+      return this.createConstructionSite(x, y, structureType);
     }
+    return ERR_INVALID_TARGET;
+  };
+
+  Room.prototype.createConstructionSiteForced = function (
+    x: number,
+    y: number,
+    structureType: BuildableStructureConstant
+  ): ScreepsReturnCode {
+    this.lookForAt(LOOK_STRUCTURES, x, y).forEach(s => s.destroy());
+    this.lookForAt(LOOK_CONSTRUCTION_SITES, x, y).forEach(s => s.remove());
+    return this.createConstructionSite(x, y, structureType);
   };
 
   RoomPosition.prototype.getFreeSpaceAround = function (): number {
@@ -357,16 +342,7 @@ export function injectMethods(): void {
         Math.min(49, this.x + 1),
         true
       )
-      .filter(
-        l =>
-          (l.type === "terrain" && l.terrain !== "wall") ||
-          l.type === "tombstone" ||
-          l.type === "ruin" ||
-          l.type === "flag" ||
-          l.type === "creep" ||
-          l.type === "energy" ||
-          l.type === "resource"
-      )
+      .filter(l => (l.type === "terrain" && l.terrain !== "wall") || treatedAsFreeType.includes(l.type))
       .map(l => new RoomPosition(l.x, l.y, this.roomName));
   };
 
@@ -378,16 +354,7 @@ export function injectMethods(): void {
     }
     this._isEmpty =
       this._isEmpty ??
-      this.look().every(
-        l =>
-          (l.type === "terrain" && l.terrain !== "wall") ||
-          l.type === "tombstone" ||
-          l.type === "ruin" ||
-          l.type === "flag" ||
-          l.type === "creep" ||
-          l.type === "energy" ||
-          l.type === "resource"
-      );
+      this.look().every(l => (l.type === "terrain" && l.terrain !== "wall") || treatedAsFreeType.includes(l.type));
     return this._isEmpty;
   };
 

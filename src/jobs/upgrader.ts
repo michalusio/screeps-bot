@@ -14,7 +14,7 @@ export interface UpgraderMemory extends CreepRoleMemory {
   state: "upgrading" | "sourcing";
 }
 
-export const upgraderBody = fillBody.bind(undefined, 24, [MOVE, CARRY, WORK, MOVE]);
+export const upgraderBody = fillBody.bind(undefined, 24, [MOVE, CARRY, WORK]);
 
 export const upgraderMemory: UpgraderMemory = {
   newCreep: true,
@@ -37,8 +37,12 @@ export function upgraderBehavior(creep: Creep): void {
         }
         creepMemory.sourcePoint = source.id;
         if (
-          tryDoOrMove(() => upgrader.withdraw(source, RESOURCE_ENERGY), upgrader.travelTo(source), upgrader, source) !==
-          OK
+          tryDoOrMove(
+            () => upgrader.withdraw(source, RESOURCE_ENERGY),
+            upgrader.travelTo(source, undefined, { ignoreCreeps: false, ignoreRoads: false }),
+            upgrader,
+            source
+          ) !== OK
         ) {
           changeState("sourcing", upgrader);
           upgrader.wander();
@@ -56,14 +60,14 @@ export function upgraderBehavior(creep: Creep): void {
         if (!controller.sign || controller.sign.text !== "MichA_I. All your base are belong to us.") {
           tryDoOrMove(
             () => upgrader.signController(controller, "MichA_I. All your base are belong to us."),
-            upgrader.travelTo(controller),
+            upgrader.travelTo(controller, undefined, { ignoreCreeps: false, ignoreRoads: false }),
             upgrader,
             controller
           );
         } else {
           tryDoOrMove(
             () => upgrader.upgradeController(controller),
-            upgrader.travelTo(controller, undefined, { range: 1 }),
+            upgrader.travelTo(controller, undefined, { range: 1, ignoreCreeps: false, ignoreRoads: false }),
             upgrader,
             controller,
             2

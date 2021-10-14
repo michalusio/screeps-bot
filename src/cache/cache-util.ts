@@ -4,9 +4,9 @@ type KeysOfType<T, U, B = false> = {
 
 export const cacheHits: { [key: string]: { hits: number; cpu: number } } = {};
 
-export type RoomCache<T> = ((room: Room, time: number) => T) & { has: (room: Room, time: number) => boolean };
+export type RoomCache<T> = ((room: Room, time: number) => T) & { has(room: Room, time: number): boolean };
 export type StructCache<U, T> = ((struct: U, time: number) => T) & {
-  has: (struct: U, time: number) => boolean;
+  has(struct: U, time: number): boolean;
   set(struct: U, value: T): void;
 };
 
@@ -64,7 +64,7 @@ export function cacheForStruct<U, T>(
     {
       has: (struct: U, time: number) => {
         const item = cache.get(struct[key]);
-        return item != null ? item[1] <= time : false;
+        return item != null ? Game.time - item[1] <= time : false;
       },
       set: (struct: U, value: T) => {
         cache.set(struct[key], [value, Game.time]);
@@ -91,7 +91,7 @@ export function cacheForRoom<T>(name: string, get: (room: Room, time: number) =>
     {
       has: (room: Room, time: number) => {
         const item = cache.get(room.name);
-        return item != null ? item[1] <= time : false;
+        return item != null ? Game.time - item[1] <= time : false;
       }
     }
   );
@@ -129,6 +129,32 @@ export function cacheForRoomStruct<T, U>(
   const cache: Map<string, Map<string, [T, number]>> = new Map();
   return (room: Room, struct: U, time: number) => {
     const getKey = struct[key];
+    let fromCache = cache.get(room.name);
+    if (!fromCache) {
+      fromCache = new Map();
+      cache.set(room.name, fromCache);
+    }
+    let fromCache2 = fromCache.get(getKey);
+    if (!fromCache2 || Game.time - fromCache2[1] > time) {
+      if (!cacheHits[name]) cacheHits[name] = { hits: 0, cpu: 0 };
+      const cpuBefore = Game.cpu.getUsed();
+      fromCache2 = [get(room, struct), Game.time];
+      cacheHits[name].hits++;
+      cacheHits[name].cpu += Game.cpu.getUsed() - cpuBefore;
+      fromCache.set(getKey, fromCache2);
+    }
+    return fromCache2[0];
+  };
+}
+
+export function cacheForRoomStructKey<T, U>(
+  name: string,
+  get: (room: Room, struct: U) => T,
+  key: (struct: U) => string
+): (room: Room, struct: U, time: number) => T {
+  const cache: Map<string, Map<string, [T, number]>> = new Map();
+  return (room: Room, struct: U, time: number) => {
+    const getKey = key(struct);
     let fromCache = cache.get(room.name);
     if (!fromCache) {
       fromCache = new Map();

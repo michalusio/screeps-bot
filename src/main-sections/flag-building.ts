@@ -26,19 +26,6 @@ export function flagBuilding(): void {
           }
         }
         break;
-      case COLOR_RED:
-        Object.keys(Game.flags)
-          .filter(flagName2 => flagName !== flagName2)
-          .map(flagName2 => Game.flags[flagName2])
-          .filter(flag2 => flag2.color === COLOR_RED && flag2.secondaryColor === flag.secondaryColor)
-          .filter(flag2 => flag2.memory.date < flag.memory.date)
-          .forEach(flag2 => {
-            flag2.remove();
-            delete Memory.flags[flag2.name];
-          });
-        break;
-      case COLOR_GREY:
-        break;
     }
   }
 }

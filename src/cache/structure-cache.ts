@@ -1,11 +1,11 @@
-import { REPAIR_PRIORITY } from "configs";
+import { REPAIR_PRIORITY, STORAGE_QUOTAS } from "configs";
 import { cacheForRoom } from "./cache-util";
-import { sources } from "./source-cache";
+import { sources, sourcesAndMineral } from "./source-cache";
 
 export const structures = cacheForRoom("structures", room => room.find(FIND_STRUCTURES));
 
 export const sourceContainers = cacheForRoom("source containers", room => {
-  const sourceList = sources(room, 1000);
+  const sourceList = sourcesAndMineral(room, 1000);
   return structures(room, 10)
     .filter(s => s.structureType === STRUCTURE_CONTAINER)
     .filter(s => sourceList.some(source => s.pos.isNearTo(source))) as StructureContainer[];
@@ -52,7 +52,13 @@ export const energyStoragesWithoutSourcedCache = cacheForRoom("energy storages w
 const freeEnergyContainersCache = cacheForRoom("free energy containers", room =>
   _.filter<StructureContainer | StructureStorage | StructureExtension | StructureSpawn>(
     room.find(FIND_STRUCTURES),
-    isEnergyContainerAnd(s => s.store.getFreeCapacity(RESOURCE_ENERGY) > (s.structureType === "spawn" ? 30 : 0))
+    isEnergyContainerAnd(s =>
+      s.structureType === "spawn"
+        ? s.store.getFreeCapacity(RESOURCE_ENERGY) > 30
+        : s.structureType === "storage"
+        ? s.store.getUsedCapacity(RESOURCE_ENERGY) < STORAGE_QUOTAS[RESOURCE_ENERGY]
+        : s.store.getFreeCapacity(RESOURCE_ENERGY) > 0
+    )
   ).map(s => s.id)
 );
 export const freeEnergyContainers = (

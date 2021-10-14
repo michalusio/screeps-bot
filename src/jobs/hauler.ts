@@ -21,7 +21,7 @@ export interface HaulerMemory extends CreepRoleMemory {
   state: "getting" | "storing";
 }
 
-export const haulerBody = fillBody.bind(undefined, 20, [MOVE, CARRY]);
+export const haulerBody = fillBody.bind(undefined, 21, [MOVE, CARRY, CARRY]);
 
 export const haulerMemory: HaulerMemory = {
   newCreep: true,

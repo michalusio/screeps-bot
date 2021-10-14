@@ -40,11 +40,15 @@ export const REPAIR_PRIORITY = {
   portal: 999
 };
 
+export const CIVILIZATION_MINIMUM_SPAWN_ENERGY = 200;
+export const CIVILIZATION_STAGE_MODIFIER = 50;
+
 export const FILL_PRIORITY = {
   spawn: 1,
   extension: 2,
-  storage: 3,
-  container: 4
+  terminal: 3,
+  storage: 4,
+  container: 5
 };
 
 export const EMPTY_PRIORITY = {
@@ -54,6 +58,28 @@ export const EMPTY_PRIORITY = {
   container: 2
 };
 
+export const STORAGE_QUOTAS = {
+  [RESOURCE_ENERGY]: 2000000
+};
+
+export const ENERGY_NOT_EMPTY_MARK = 200;
+
+export const BODYPART_PRIORITY: { [key: string]: number } = {
+  [TOUGH]: 0,
+  [WORK]: 1,
+  [CARRY]: 2,
+  [MOVE]: 3,
+  [ATTACK]: 4,
+  [RANGED_ATTACK]: 5,
+  [HEAL]: 6,
+  [CLAIM]: 7
+};
+
 export const PLACEMENT_CACHE_TIME = 10;
 export const USABLE_SPAWN_AREA = 4;
 export const NEW_COLONY_SPAWN_SIZE = 6;
+
+export const MY_CREEP_PATH_COST = 150;
+export const HOSTILE_CREEP_AVOID_ZONE_SIZE = 2;
+
+export const ATTACKER_SQUAD_SIZE = 3;

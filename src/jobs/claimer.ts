@@ -1,5 +1,5 @@
 import { getPathFromCache } from "cache/path-cache";
-import { sources } from "cache/source-cache";
+import { sourcesAndMineral } from "cache/source-cache";
 import { NEW_COLONY_SPAWN_SIZE } from "configs";
 import { CreepRemoteMemory, tryDoOrMove } from "utils/creeps";
 import { ScoutData } from "utils/declarations";
@@ -130,7 +130,7 @@ export function getAllure(averageDistance: number, data: ScoutData): number {
     getRoomNameOnSide(data.roomName, FIND_EXIT_BOTTOM),
     getRoomNameOnSide(data.roomName, FIND_EXIT_LEFT),
     getRoomNameOnSide(data.roomName, FIND_EXIT_RIGHT)
-  ].filter(r => r != null);
+  ].filter(r => r != null) as string[];
   const howManyAreMine = _.filter(
     adjacentRooms,
     r => Memory.rooms[r] && Object.keys(Memory.rooms[r]).length > 0
@@ -186,7 +186,7 @@ export function placeInitialSpawn(room: Room): RoomPosition | null {
       room.visual.text(value.toString(), x, y);
     }
   });
-  const stuff = [...sources(room, 1000), ...(room.controller ? [room.controller] : [])];
+  const stuff = [...sourcesAndMineral(room, 1000), ...(room.controller ? [room.controller] : [])];
   const points = _.filter(
     _.map(subs, (v, pos) => [pos, v] as unknown as [number, number]),
     s => s[1] > NEW_COLONY_SPAWN_SIZE

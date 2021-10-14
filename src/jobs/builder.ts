@@ -1,4 +1,5 @@
 import { constructionSites, structuresToRepair } from "cache/structure-cache";
+import { ENERGY_NOT_EMPTY_MARK } from "configs";
 import { energyContainerNotEmpty, fillBody, getByIdOrNew, tryDoOrMove } from "utils/creeps";
 
 import { CreepRoleMemory, stateChanger } from "../utils/creeps/role-memory";
@@ -19,7 +20,7 @@ export interface BuilderMemory extends CreepRoleMemory {
   state: "building" | "repairing" | "sourcing";
 }
 
-export const builderBody = fillBody.bind(undefined, 20, [WORK, CARRY, MOVE]);
+export const builderBody = fillBody.bind(undefined, 21, [WORK, CARRY, MOVE]);
 
 export const builderMemory: BuilderMemory = {
   newCreep: true,
@@ -55,7 +56,7 @@ export function builderBehavior(creep: Creep): void {
           creepMemory.sourcePoint = undefined;
           break;
         }
-        if (source.store.getUsedCapacity(RESOURCE_ENERGY) < 200 && !(source instanceof Ruin)) {
+        if (source.store.getUsedCapacity(RESOURCE_ENERGY) < ENERGY_NOT_EMPTY_MARK && !(source instanceof Ruin)) {
           changeState("sourcing", builder);
           break;
         }

@@ -1,4 +1,4 @@
-import { sources } from "cache/source-cache";
+import { sourcesAndMineral } from "cache/source-cache";
 import { sourceContainers } from "cache/structure-cache";
 import { fillBody, getByIdOrNew, tryDoOrMove } from "utils/creeps";
 
@@ -11,7 +11,7 @@ export interface Miner extends Creep {
 export interface MinerMemory extends CreepRoleMemory {
   role: "miner";
 
-  sourcePoint?: Id<Source>;
+  sourcePoint?: Id<Source | Mineral>;
 
   state: "mining";
 }
@@ -34,8 +34,14 @@ export function minerBehavior(creep: Creep): void {
         const source = getByIdOrNew(
           creepMemory.sourcePoint,
           () =>
-            sources(creep.room, 1000).filter(s =>
-              _.every(Game.creeps, c => c.roleMemory.role !== "miner" || (c.memory as MinerMemory).sourcePoint !== s.id)
+            sourcesAndMineral(creep.room, 1000).filter(
+              s =>
+                (s instanceof Source ||
+                  s.pos.lookFor(LOOK_STRUCTURES).some(s => s.structureType === STRUCTURE_EXTRACTOR)) &&
+                _.every(
+                  Game.creeps,
+                  c => c.roleMemory.role !== "miner" || (c.memory as MinerMemory).sourcePoint !== s.id
+                )
             )[0]
         );
         if (!source) {
@@ -49,7 +55,11 @@ export function minerBehavior(creep: Creep): void {
           if (sourceContainer) {
             tryDoOrMove(
               () => miner.harvest(source),
-              () => miner.travelInto(sourceContainer, undefined, { ignoreCreeps: true }),
+              () =>
+                miner.travelInto(sourceContainer, undefined, {
+                  ignoreCreeps: true,
+                  visualizePathStyle: { stroke: "#ff0000" }
+                }),
               miner,
               source
             );

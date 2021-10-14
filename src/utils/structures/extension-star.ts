@@ -30,20 +30,21 @@ export const extensionStar = {
   },
   placeAt(pos: RoomPosition): void {
     const room = Game.rooms[pos.roomName];
-    room.createConstructionSite(pos.x, pos.y, STRUCTURE_EXTENSION);
-    room.createConstructionSite(pos.x - 1, pos.y, STRUCTURE_EXTENSION);
-    room.createConstructionSite(pos.x, pos.y - 1, STRUCTURE_EXTENSION);
-    room.createConstructionSite(pos.x + 1, pos.y, STRUCTURE_EXTENSION);
-    room.createConstructionSite(pos.x, pos.y + 1, STRUCTURE_EXTENSION);
 
-    room.createConstructionSite(pos.x - 1, pos.y - 1, STRUCTURE_ROAD);
-    room.createConstructionSite(pos.x - 1, pos.y + 1, STRUCTURE_ROAD);
-    room.createConstructionSite(pos.x + 1, pos.y - 1, STRUCTURE_ROAD);
-    room.createConstructionSite(pos.x + 1, pos.y + 1, STRUCTURE_ROAD);
+    room.createConstructionSiteForced(pos.x, pos.y, STRUCTURE_EXTENSION);
+    room.createConstructionSiteForced(pos.x - 1, pos.y, STRUCTURE_EXTENSION);
+    room.createConstructionSiteForced(pos.x, pos.y - 1, STRUCTURE_EXTENSION);
+    room.createConstructionSiteForced(pos.x + 1, pos.y, STRUCTURE_EXTENSION);
+    room.createConstructionSiteForced(pos.x, pos.y + 1, STRUCTURE_EXTENSION);
 
-    room.createConstructionSite(pos.x - 2, pos.y, STRUCTURE_ROAD);
-    room.createConstructionSite(pos.x, pos.y - 2, STRUCTURE_ROAD);
-    room.createConstructionSite(pos.x + 2, pos.y, STRUCTURE_ROAD);
-    room.createConstructionSite(pos.x, pos.y + 2, STRUCTURE_ROAD);
+    room.createConstructionSiteIfEmpty(pos.x - 1, pos.y - 1, STRUCTURE_ROAD);
+    room.createConstructionSiteIfEmpty(pos.x - 1, pos.y + 1, STRUCTURE_ROAD);
+    room.createConstructionSiteIfEmpty(pos.x + 1, pos.y - 1, STRUCTURE_ROAD);
+    room.createConstructionSiteIfEmpty(pos.x + 1, pos.y + 1, STRUCTURE_ROAD);
+
+    room.createConstructionSiteIfEmpty(pos.x - 2, pos.y, STRUCTURE_ROAD);
+    room.createConstructionSiteIfEmpty(pos.x, pos.y - 2, STRUCTURE_ROAD);
+    room.createConstructionSiteIfEmpty(pos.x + 2, pos.y, STRUCTURE_ROAD);
+    room.createConstructionSiteIfEmpty(pos.x, pos.y + 2, STRUCTURE_ROAD);
   }
 };

@@ -1,5 +1,7 @@
+import { costMatrixCache } from "cache/cost-matrix";
 import { mySpawns } from "cache/structure-cache";
 import { getAllure, placeInitialSpawn } from "jobs/claimer";
+import { Attacker } from "jobs/offence/attacker";
 import { extensionStar } from "utils/structures/extension-star";
 import { messages, pruneLogs } from "../utils/log";
 import { CreepCounter } from "./creep-counting";
@@ -9,7 +11,7 @@ export function logging(creepCount: CreepCounter): void {
   pruneLogs();
 
   showScoutVisuals();
-
+  showAttackVisuals();
   showSpawnVisuals();
 
   if (!Memory.visuals) return;
@@ -300,7 +302,7 @@ function showScoutVisuals() {
     ) {
       const averageDistance = (max - data.sourcesControllerAverageDistance) / (max - min);
       const distHeight = Math.round(20 * averageDistance + 1);
-      Game.map.visual.rect(new RoomPosition(46, 50 - distHeight, roomName), 4, distHeight, {
+      Game.map.visual.rect(new RoomPosition(46, Math.min(49, 50 - distHeight), roomName), 4, distHeight, {
         fill: "#00ff00",
         opacity: 1
       });
@@ -315,7 +317,18 @@ function showScoutVisuals() {
 }
 
 function showSpawnVisuals() {
-  if (!Memory.spawnVisualizer) return;
+  if (!Memory.visualizer) return;
+  Memory.visualizer.forEach(room => {
+    const matrix = costMatrixCache(`${room}|false|false`, 13);
+    for (let x = 0; x < 50; x++) {
+      for (let y = 0; y < 50; y++) {
+        const pos = new RoomPosition(x, y, room);
+        const cost = matrix.get(pos.x, pos.y);
+        Game.rooms[room].visual.rect(pos.x - 0.5, pos.y - 0.5, 1, 1, { fill: "red", opacity: Math.min(cost / 10) });
+      }
+    }
+  });
+  /*
   Memory.spawnVisualizer.forEach(room => {
     const place = placeInitialSpawn(Game.rooms[room]);
     if (place) {
@@ -337,5 +350,28 @@ function showSpawnVisuals() {
         fill: "red"
       });
     });
-  });
+  });*/
+}
+function showAttackVisuals(): void {
+  Game.map.visual.poly(
+    Object.keys(Game.flags)
+      .filter(f => f.startsWith("Attack"))
+      .sort()
+      .map(f => Game.flags[f].pos),
+    { opacity: 0.5, strokeWidth: 2, lineStyle: "dashed", stroke: "#ff0000" }
+  );
+  Object.keys(Game.creeps)
+    .map(c => Game.creeps[c])
+    .filter(c => !c.spawning && c.roleMemory.role === "attacker")
+    .map(c => c as Attacker)
+    .filter(c => c.memory.squadColor != null)
+    .forEach(c => {
+      Game.map.visual.circle(c.pos, {
+        fill: "#ff0000",
+        stroke: "#000000",
+        strokeWidth: 0.3,
+        opacity: 0.5,
+        radius: 1.3
+      });
+    });
 }

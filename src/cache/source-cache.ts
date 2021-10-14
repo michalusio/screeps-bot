@@ -6,6 +6,14 @@ export const sources = (room: Room, time: number): Source[] =>
     .map(id => Game.getObjectById(id))
     .filter(s => s != null) as Source[];
 
+const sourcesAndMineralCache = cacheForRoom("sources and mineral", room => {
+  return [...room.find(FIND_SOURCES).map(s => s.id), ...room.find(FIND_MINERALS).map(m => m.id)];
+});
+export const sourcesAndMineral = (room: Room, time: number): (Source | Mineral<MineralConstant>)[] =>
+  sourcesAndMineralCache(room, time)
+    .map(id => Game.getObjectById(id))
+    .filter(s => s != null) as (Source | Mineral<MineralConstant>)[];
+
 export const activeSources = (room: Room, time: number): Source[] =>
   sourcesCache(room, time)
     .map(id => Game.getObjectById(id))
