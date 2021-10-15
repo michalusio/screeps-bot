@@ -1,15 +1,24 @@
 import { StatusCode } from "../types";
 
+export enum ProcessMessageType {
+  ProcessEnd = "process-end",
+  ProcessSuspend = "process-suspend",
+  ProcessYield = "process-yield"
+}
+
 export type ProcessMessage<U> =
   | Readonly<{
-      type: "process-end";
+      type: ProcessMessageType.ProcessEnd;
       statusCode: StatusCode.OK;
       resultValue: U;
     }>
   | Readonly<{
-      type: "process-end";
+      type: ProcessMessageType.ProcessEnd;
       statusCode: StatusCode.ERROR;
     }>
   | Readonly<{
-      type: "process-skip-tick";
+      type: ProcessMessageType.ProcessSuspend;
+    }>
+  | Readonly<{
+      type: ProcessMessageType.ProcessYield;
     }>;
