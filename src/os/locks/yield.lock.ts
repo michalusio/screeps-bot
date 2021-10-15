@@ -5,4 +5,5 @@ export function* Yield(): Lock<void> {
   yield {
     type: ProcessMessageType.ProcessYield
   };
+  return { value: undefined };
 }

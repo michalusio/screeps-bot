@@ -8,4 +8,5 @@ export function* waitTicks(ticks: number): Lock<void> {
       type: ProcessMessageType.ProcessSuspend
     };
   }
+  return { value: undefined };
 }

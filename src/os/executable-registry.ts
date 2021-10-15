@@ -12,7 +12,9 @@ export class ExecutableRegistry {
   private readonly executables: Executable<unknown, unknown>[] = [];
 
   private constructor() {
-    //
+    if (ExecutableRegistry._instance) {
+      throw new Error("ExecutableRegistry is a singleton");
+    }
   }
 
   public addExecutable(executable: Executable<unknown, unknown>): void {
