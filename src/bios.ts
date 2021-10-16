@@ -1,11 +1,13 @@
 import { ExecutableRegistry } from "os/executable-registry";
 import { Process } from "os/processing/process";
 import { ProcessMemento } from "os/processing/process-memento";
+import { ProcessMemory } from "os/processing/process-memory";
 import { Scheduler } from "os/scheduler";
+import { PID } from "os/types";
 
 declare global {
   // eslint-disable-next-line no-var
-  var ps: () => void;
+  var run: (command: string) => string;
 
   interface String {
     hashCode(): number;
@@ -14,6 +16,7 @@ declare global {
   interface Memory {
     os: {
       processes: ProcessMemento[];
+      processMemory: { [key: PID]: ProcessMemory };
     };
   }
 }
@@ -21,17 +24,22 @@ declare global {
 export function init(): void {
   if (Memory.os === undefined) {
     Memory.os = {
-      processes: []
+      processes: [],
+      processMemory: {}
     };
   }
 
-  global.ps = () => {
-    const exec = ExecutableRegistry.instance.getExecutable("ps");
-    if (!exec) {
-      console.log("Cannot find 'ps'");
-      return;
+  global.run = (command: string): string => {
+    const data = command.split(" ");
+    if (data.length === 0) {
+      return "No command given";
     }
-    Scheduler.instance.queueProcess(new Process(exec));
+    const exec = ExecutableRegistry.instance.getExecutable(data[0]);
+    if (!exec) {
+      return `Cannot find '${data[0]}'`;
+    }
+    Scheduler.instance.queueProcess(new Process(exec, data.slice(1)));
+    return "OK";
   };
 
   String.prototype.hashCode = function (): number {

@@ -4,6 +4,8 @@ import { ExecutableGenerator } from "./processing/executable";
 import { ProcessMessage, ProcessMessageType } from "./processing/messages";
 import { Process } from "./processing/process";
 import { ProcessState } from "./processing/process-memento";
+import { ProcessMemory } from "./processing/process-memory";
+import { PID } from "./types";
 
 type RunningProcess<TResult> = [Process<TResult>, ExecutableGenerator<TResult>];
 
@@ -22,12 +24,14 @@ export class Scheduler {
     return Scheduler._instance;
   }
 
-  private _runningProcessesHeap: MinimumHeap<RunningProcess<unknown>> = new MinimumHeap<RunningProcess<unknown>>(a => {
+  private readonly _runningProcessesHeap: MinimumHeap<RunningProcess<unknown>> = new MinimumHeap<
+    RunningProcess<unknown>
+  >(a => {
     const process = a[0];
-    return (
-      -process.priority +
-      process.totalCpu -
-      -(process.state === ProcessState.RUNNING || process.state === ProcessState.NOT_STARTED ? 1000 : 0)
+    return -(
+      process.priority * 5 -
+      process.totalCpu +
+      (process.state === ProcessState.RUNNING || process.state === ProcessState.NOT_STARTED ? 1000 : 0)
     );
   });
 
@@ -47,13 +51,16 @@ export class Scheduler {
 
     this._suspendedProcesses = remadeProcesses
       .filter(pr => pr.state === ProcessState.SUSPENDED)
-      .map(pr => [pr, pr.executable.run(pr.args)] as RunningProcess<unknown>);
+      .map(pr => [pr, pr.executable.run(this.getProcessMemory(pr.pid), pr.args)] as RunningProcess<unknown>);
 
     remadeProcesses.filter(pr => pr.state !== ProcessState.SUSPENDED).forEach(pr => this.queueProcess(pr));
   }
 
   public queueProcess(process: Process<unknown>): void {
-    this._runningProcessesHeap.insert([process, process.executable.run(process.args)]);
+    this._runningProcessesHeap.insert([
+      process,
+      process.executable.run(this.getProcessMemory(process.pid), process.args)
+    ]);
     process.state = ProcessState.RUNNING;
     process.startTick = Game.time;
   }
@@ -125,5 +132,10 @@ export class Scheduler {
     Memory.os.processes = this._runningProcessesHeap.heap
       .map(pr => pr[0].toJSON())
       .concat(this._suspendedProcesses.map(pr => pr[0].toJSON()));
+  }
+
+  private getProcessMemory(process: PID): ProcessMemory {
+    if (!Memory.os.processMemory[process]) Memory.os.processMemory[process] = {};
+    return Memory.os.processMemory[process];
   }
 }

@@ -1,6 +1,6 @@
 import { init } from "bios";
 import { ExecutableRegistry } from "os/executable-registry";
-import { PSExecutable } from "os/executables/ps.exec";
+import { PSExecutable } from "executables/ps.exec";
 import { Kernel } from "os/kernel";
 
 init();

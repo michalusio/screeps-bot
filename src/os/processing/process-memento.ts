@@ -8,7 +8,7 @@ export enum ProcessState {
   TERMINATED = "Terminated"
 }
 
-export type ProcessArguments = [string | number | boolean | void | Id<unknown>] | undefined;
+export type ProcessArguments = (string | number | boolean | void | Id<unknown>)[] | undefined;
 
 export interface ProcessMemento {
   pid: PID;
