@@ -7,7 +7,8 @@
     "lint": "eslint \"src/**/*.ts\"",
     "build": "rollup -c",
     "watch": "rollup -cw",
-    "watch:pserver": "rollup -cw --environment DEST:pserver"
+    "watch:pserver-main": "rollup -cw --environment DEST:pserver-main",
+    "watch:pserver-kernel": "rollup -cw --environment DEST:pserver-kernel"
   },
   "devDependencies": {
     "@rollup/plugin-commonjs": "^20.0.0",
