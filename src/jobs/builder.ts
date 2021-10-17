@@ -79,10 +79,17 @@ export function builderBehavior(creep: Creep): void {
           break;
         }
         creepMemory.buildPoint = site.id;
-        tryDoOrMove(() => builder.build(site), builder.travelTo(site, undefined, { range: 3 }), builder, site);
         if (builder.store.getUsedCapacity(RESOURCE_ENERGY) <= 0) {
-          changeState("sourcing", builder);
-        }
+          const energySpot = site.pos.lookFor(LOOK_ENERGY);
+          if (energySpot.length > 0) {
+            tryDoOrMove(
+              () => builder.pickup(energySpot[0]),
+              builder.travelTo(site, undefined, { range: 1 }),
+              builder,
+              site
+            );
+          } else changeState("sourcing", builder);
+        } else tryDoOrMove(() => builder.build(site), builder.travelTo(site, undefined, { range: 3 }), builder, site);
       }
       break;
 
