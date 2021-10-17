@@ -1,4 +1,5 @@
 import { Executable } from "./processing/executable";
+import { ProcessArguments } from "./processing/process-memento";
 
 export class ExecutableRegistry {
   private static _instance: ExecutableRegistry;
@@ -9,7 +10,7 @@ export class ExecutableRegistry {
     return ExecutableRegistry._instance;
   }
 
-  private readonly executables: Executable<unknown, unknown>[] = [];
+  private readonly executables: Executable<ProcessArguments, unknown>[] = [];
 
   private constructor() {
     if (ExecutableRegistry._instance) {
@@ -17,17 +18,17 @@ export class ExecutableRegistry {
     }
   }
 
-  public addExecutable(executable: Executable<unknown, unknown>): void {
+  public addExecutable(executable: Executable<ProcessArguments, unknown>): void {
     if (!this.executables.find(e => e.name === executable.name)) {
       this.executables.push(executable);
     }
   }
 
-  public getExecutable(name: string): Executable<unknown, unknown> | undefined {
+  public getExecutable(name: string): Executable<ProcessArguments, unknown> | undefined {
     return this.executables.find(e => e.name === name);
   }
 
-  public get allExecutables(): Executable<unknown, unknown>[] {
+  public get allExecutables(): Executable<ProcessArguments, unknown>[] {
     return [...this.executables];
   }
 }

@@ -1,3 +1,6 @@
+import { ProcessArgument } from "./process-memento";
+
+type ProcessMemoryInternal = ProcessArgument | ProcessMemory | undefined;
 export interface ProcessMemory {
-  [key: string]: number | string | Id<unknown> | null | undefined | ProcessMemory;
+  [key: string]: ProcessMemoryInternal | ProcessMemoryInternal[];
 }

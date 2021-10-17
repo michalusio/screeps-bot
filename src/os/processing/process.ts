@@ -19,7 +19,7 @@ export class Process<TResult> {
   constructor(executable: Executable<ProcessArguments, TResult>, mementoOrArgs?: ProcessArguments | ProcessMemento) {
     this.executable = executable;
     if (!mementoOrArgs || Array.isArray(mementoOrArgs)) {
-      this.args = mementoOrArgs;
+      this.args = mementoOrArgs ?? [];
       this.pid = `${JSON.stringify(this.executable.name)}-${Math.random()}`.hashCode();
     } else {
       const memento = mementoOrArgs;

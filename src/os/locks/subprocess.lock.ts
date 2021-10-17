@@ -1,19 +1,20 @@
 import { ExecutableRegistry } from "os/executable-registry";
 import { Executable } from "os/processing/executable";
 import { Lock } from "os/processing/lock";
+import { ProcessArguments } from "os/processing/process-memento";
 import { ProcessMemory } from "os/processing/process-memory";
 
-export function Subprocess<TArgs, TResult>(
+export function Subprocess<TArgs extends ProcessArguments, TResult>(
   subprocessMemory: ProcessMemory,
   execName: string,
   args: TArgs
 ): Lock<TResult>;
-export function Subprocess<TArgs, TResult>(
+export function Subprocess<TArgs extends ProcessArguments, TResult>(
   subprocessMemory: ProcessMemory,
   exec: Executable<TArgs, TResult>,
   args: TArgs
 ): Lock<TResult>;
-export function* Subprocess<TArgs, TResult>(
+export function* Subprocess<TArgs extends ProcessArguments, TResult>(
   subprocessMemory: ProcessMemory,
   exec: Executable<TArgs, TResult> | string,
   args: TArgs
