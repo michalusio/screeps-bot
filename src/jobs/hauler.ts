@@ -38,7 +38,7 @@ const avoidSources = (room: Room): RoomPosition[] => sources(room, 1000).flatMap
 const findNewResource = (hauler: Hauler) => () => {
   const cache = droppedEnergy(hauler.room, 1);
   return _.find(
-    _.sortBy(cache, r => r.pos.getRangeTo(hauler.pos)),
+    _.sortBy(cache, r => r.pos.getRangeTo(hauler.pos) - r.amount / 500),
     r => r.pos.getFreeSpaceAround() > 0 || r.pos.isNearTo(hauler)
   );
 };
@@ -140,6 +140,10 @@ export function haulerBehavior(creep: Creep): void {
 
     case "storing":
       {
+        if (hauler.store.getUsedCapacity(RESOURCE_ENERGY) === 0) {
+          changeState("getting", hauler);
+          return;
+        }
         const storage = getByIdOrNew(creepMemory.storagePoint, energyContainerNotFull(hauler));
         if (!storage) break;
         if (!storage.store || storage.store.getFreeCapacity(RESOURCE_ENERGY) === 0) {
