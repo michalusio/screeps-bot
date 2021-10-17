@@ -1,8 +1,7 @@
 import { costMatrixCache } from "cache/cost-matrix";
-import { mySpawns } from "cache/structure-cache";
-import { getAllure, placeInitialSpawn } from "jobs/claimer";
+import { getAllure } from "jobs/claimer";
 import { Attacker } from "jobs/offence/attacker";
-import { extensionStar } from "utils/structures/extension-star";
+import { RemoteMiner } from "jobs/remote-miner";
 import { messages, pruneLogs } from "../utils/log";
 import { CreepCounter } from "./creep-counting";
 import { civilizationEnergyLevel } from "./stages";
@@ -12,6 +11,7 @@ export function logging(creepCount: CreepCounter): void {
 
   showScoutVisuals();
   showAttackVisuals();
+  showRemoteVisuals();
   showSpawnVisuals();
 
   if (!Memory.visuals) return;
@@ -26,6 +26,7 @@ export function logging(creepCount: CreepCounter): void {
     const visual = room.visual;
     Game.map.visual.text(room.memory.mode, new RoomPosition(25, 5, room.name), {
       fontFamily: "monospace",
+      fontSize: 9,
       color: "#cccccc"
     });
     const level = room.memory.civilizationLevel;
@@ -284,6 +285,7 @@ function showScoutVisuals() {
     ),
     s => s.sourcesControllerAverageDistance
   );
+  if (sortedByDistance.length === 0) return;
   const [min, max] = [
     _.first(sortedByDistance).sourcesControllerAverageDistance,
     _.last(sortedByDistance).sourcesControllerAverageDistance
@@ -319,7 +321,7 @@ function showScoutVisuals() {
 function showSpawnVisuals() {
   if (!Memory.visualizer) return;
   Memory.visualizer.forEach(room => {
-    const matrix = costMatrixCache(`${room}|false|false`, 13);
+    const matrix = costMatrixCache(`${room}|false|false|1`, 13);
     for (let x = 0; x < 50; x++) {
       for (let y = 0; y < 50; y++) {
         const pos = new RoomPosition(x, y, room);
@@ -372,6 +374,24 @@ function showAttackVisuals(): void {
         strokeWidth: 0.3,
         opacity: 0.5,
         radius: 1.3
+      });
+    });
+}
+function showRemoteVisuals() {
+  Object.keys(Game.creeps)
+    .map(c => Game.creeps[c])
+    .filter(c => !c.spawning && c.roleMemory.role === "remoteminer")
+    .map(c => c as RemoteMiner)
+    .filter(c => c.memory.originRoom && c.memory.sourceRoom)
+    .forEach(c => {
+      if (!c.memory.sourceRoom) return;
+      const origin = new RoomPosition(25, 25, c.memory.originRoom);
+      const source = new RoomPosition(25, 25, c.memory.sourceRoom);
+      Game.map.visual.line(origin, source, {
+        opacity: 0.5,
+        color: "#ffdd00",
+        width: 2,
+        lineStyle: "dotted"
       });
     });
 }

@@ -34,18 +34,20 @@ export const Bootstrap = {
   canEnter: (): boolean => false,
   canLeave: (room: Room): boolean => (room.controller?.level ?? -1) >= 6,
   stages: (room: Room): Stage[] => {
+    const anyEnemies = room.find(FIND_HOSTILE_CREEPS).length > 0 ? 1 : 0;
     const builderMod = constructionSites(room, 50).length > 0 ? 1 : 0;
     const energyLayingAroundMod = Math.min(2, Math.floor(_.sum(droppedEnergy(room, 1), e => e.amount) / 750));
+    const fullRCL = (room.controller?.level ?? -1) === 8;
     return [
       { roles: { miner: 1, hauler: 1 } },
       { roles: { miner: 2, hauler: 2, upgrader: 1 } },
-      { roles: { defender: 1 } },
-      { roles: { upgrader: 2, builder: builderMod }, structures: [rcl(2), extensionPlacer(5)] },
+      { roles: { defender: anyEnemies } },
+      { roles: { upgrader: fullRCL ? 1 : 2, builder: builderMod }, structures: [rcl(2), extensionPlacer(5)] },
       { roles: { builder: 2 * builderMod, remoteminer: 1 }, structures: [roadsToSources, placeContainers] },
       { roles: { towerbro: 1 }, structures: [roadsToController, rcl(3), extensionPlacer(10)] },
       { roles: { hauler: 2 + energyLayingAroundMod }, structures: [placeTower(1)] },
       { roles: { remoteminer: 2 }, structures: [roadsBetweenSources] },
-      { roles: { remoteminer: 4, upgrader: 3 }, structures: [roadsToExits, rcl(4), extensionPlacer(20)] },
+      { roles: { remoteminer: 4, upgrader: fullRCL ? 1 : 3 }, structures: [roadsToExits, rcl(4), extensionPlacer(20)] },
       { roles: { remoteminer: 6, scout: 1 }, structures: [storage, placeTower(2), rcl(5), link, extensionPlacer(30)] }
     ];
   }
@@ -108,11 +110,12 @@ export const Idling = {
   canEnter: (room: Room): boolean => room.memory.children.length > 0,
   canLeave: (): boolean => false,
   stages: (room: Room): Stage[] => {
+    const fullRCL = (room.controller?.level ?? -1) === 8;
     const redFlags = Object.keys(Game.flags).some(f => Game.flags[f].color === COLOR_RED);
     return [
       ...Bootstrap.stages(room),
       {
-        roles: { scout: 3, upgrader: 4, miner: 3 },
+        roles: { scout: 3, upgrader: fullRCL ? 1 : 4, miner: 3 },
         structures: [extensionPlacer(40), extractor, rcl(7), extensionPlacer(50)]
       },
       { roles: { attacker: redFlags ? 2 : 0 } }

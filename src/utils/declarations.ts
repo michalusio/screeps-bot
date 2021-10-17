@@ -100,6 +100,7 @@ declare global {
   interface Creep {
     roleMemory: CreepRoleMemory;
     wander(): CreepMoveReturnCode;
+    moveModifier(): number;
     travelTo(
       target: RoomPosition | _HasRoomPosition,
       avoid?: (room: Room) => RoomPosition[],
@@ -190,6 +191,7 @@ declare global {
 }
 
 export function injectMethods(): void {
+  if (Creep.prototype.roleMemory) return;
   global.minBy = function <T>(collection: T[], iteratee?: (val: T) => number): T | undefined {
     const result = _.min(collection, iteratee) as T | number;
     return result === Number.POSITIVE_INFINITY ? undefined : (result as T);
@@ -453,22 +455,28 @@ export function injectMethods(): void {
   Creep.prototype.travelTo = function (
     target: RoomPosition | _HasRoomPosition,
     avoid?: (room: Room) => RoomPosition[],
-    options?: MoveToOpts | undefined
+    options?: (MoveToOpts & { moveModifier?: number }) | undefined
   ): () => MoveToReturnCode {
     const targeted = target instanceof RoomPosition ? target : target.pos;
     const hash = (this.roleMemory.role.hashCode() >> 8) & 0xffffff;
     return () => {
       if (this.pos.isNearTo(targeted)) return OK;
-      const pathMove = this.moveByPath(
-        getPathFromCache(this.pos, targeted, {
+      if (!this.roleMemory._travel || this.pos.isEqualTo(_.last(this.roleMemory._travel))) {
+        this.roleMemory._travel = getPathFromCache(this.pos, targeted, {
           ignoreRoads: false,
           ignoreCreeps: false,
+          moveModifier: this.moveModifier(),
           range: 1,
           visualizePathStyle: { stroke: "#" + hash.toString(16) },
           ...(options ?? {})
-        })
-      );
-      if (pathMove === -10) {
+        }).slice(0, 5);
+      }
+      const pathMove = this.moveByPath(this.roleMemory._travel.map(p => new RoomPosition(p.x, p.y, p.roomName)));
+      if (pathMove === ERR_NOT_FOUND) {
+        this.roleMemory._travel = undefined;
+        return ERR_NOT_FOUND;
+      }
+      if (pathMove === ERR_INVALID_ARGS) {
         const addonAvoided = targeted.isBorderCell() ? [] : exits(this.room, 1000);
         const avoided = [...(avoid?.call(undefined, this.room) ?? []), ...addonAvoided];
         const costCallback = (name: string, matrix: CostMatrix) => {
@@ -492,21 +500,26 @@ export function injectMethods(): void {
   Creep.prototype.travelInto = function (
     target: RoomPosition | _HasRoomPosition,
     avoid?: (room: Room) => RoomPosition[],
-    options?: MoveToOpts | undefined
+    options?: (MoveToOpts & { moveModifier?: number }) | undefined
   ): MoveToReturnCode {
     const targeted = target instanceof RoomPosition ? target : target.pos;
     const hash = (this.roleMemory.role.hashCode() >> 8) & 0xffffff;
-
-    const pathMove = this.moveByPath(
-      getPathFromCache(this.pos, targeted, {
+    if (!this.roleMemory._travel || this.pos.isEqualTo(_.last(this.roleMemory._travel))) {
+      this.roleMemory._travel = getPathFromCache(this.pos, targeted, {
         ignoreRoads: false,
         ignoreCreeps: false,
+        moveModifier: this.moveModifier(),
         range: 0,
         visualizePathStyle: { stroke: "#" + hash.toString(16) },
         ...(options ?? {})
-      })
-    );
-    if (pathMove === -10) {
+      });
+    }
+    const pathMove = this.moveByPath(this.roleMemory._travel.map(p => new RoomPosition(p.x, p.y, p.roomName)));
+    if (pathMove === ERR_NOT_FOUND) {
+      this.roleMemory._travel = undefined;
+      return ERR_NOT_FOUND;
+    }
+    if (pathMove === ERR_INVALID_ARGS) {
       const addonAvoided = targeted.isBorderCell() ? [] : exits(this.room, 1000);
       const avoided = [...(avoid?.call(undefined, this.room) ?? []), ...addonAvoided];
       const costCallback = (name: string, matrix: CostMatrix) => {
@@ -524,6 +537,14 @@ export function injectMethods(): void {
       });
     }
     return pathMove;
+  };
+
+  Creep.prototype.moveModifier = function (): number {
+    return (
+      (_.sum(this.body, b => (b.type === "carry" || b.type === "move" ? 0 : 1)) +
+        Math.ceil(this.store.getUsedCapacity() / 50)) /
+      (2 * (this.getActiveBodyparts(MOVE) ?? 1))
+    );
   };
 
   Object.defineProperty(Creep.prototype, "roleMemory", {

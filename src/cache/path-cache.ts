@@ -2,13 +2,14 @@ import { cacheForKey, cacheForRoom, cacheForRoomStructKey, cacheForStruct, RoomC
 import { costMatrixCache } from "./cost-matrix";
 import { mySpawns } from "./structure-cache";
 
-type PathKey = `${number} ${number}|${number} ${number}|${string}${boolean}${boolean}`;
+type PathKey = `${number} ${number}|${number} ${number}|${string}${boolean}${boolean}${number}`;
 
 interface PathData {
   aPos: RoomPosition;
   bPos: RoomPosition;
   ignoreCreeps: boolean;
   ignoreRoads: boolean;
+  moveModifier: number;
   range: number;
   visualizePathStyle?: PolyStyle;
 }
@@ -17,7 +18,7 @@ interface PathDataWithKey extends PathData {
 }
 
 const key = (x: PathData): PathKey =>
-  `${x.aPos.x} ${x.aPos.y}|${x.bPos.x} ${x.bPos.y}|${x.aPos.roomName}${x.ignoreRoads}${x.ignoreCreeps}`;
+  `${x.aPos.x} ${x.aPos.y}|${x.bPos.x} ${x.bPos.y}|${x.aPos.roomName}${x.ignoreRoads}${x.ignoreCreeps}${x.moveModifier}`;
 
 const pathsCache = cacheForStruct<PathDataWithKey, RoomPosition[]>(
   "path cache",
@@ -27,7 +28,8 @@ const pathsCache = cacheForStruct<PathDataWithKey, RoomPosition[]>(
       { pos: struct.bPos, range: struct.range },
       {
         maxRooms: 1,
-        roomCallback: roomName => costMatrixCache(`${roomName}|${struct.ignoreRoads}|${struct.ignoreCreeps}`, 13),
+        roomCallback: roomName =>
+          costMatrixCache(`${roomName}|${struct.ignoreRoads}|${struct.ignoreCreeps}|${struct.moveModifier}`, 13),
         maxOps: 1000,
         heuristicWeight: 1.25
       }
@@ -41,10 +43,11 @@ const pathsCache = cacheForStruct<PathDataWithKey, RoomPosition[]>(
 export function getPathFromCache(
   a: RoomPosition | _HasRoomPosition,
   b: RoomPosition | _HasRoomPosition,
-  options: MoveToOpts = {
+  options: MoveToOpts & { moveModifier?: number } = {
     ignoreRoads: false,
     ignoreCreeps: true,
     range: 1,
+    moveModifier: 1,
     visualizePathStyle: undefined
   }
 ): RoomPosition[] {
@@ -54,9 +57,10 @@ export function getPathFromCache(
   const data: PathData = {
     aPos,
     bPos,
-    ignoreRoads: options.ignoreRoads ?? false,
-    ignoreCreeps: options.ignoreCreeps ?? true,
-    range: options.range ?? 1
+    ignoreRoads: options.ignoreRoads === undefined ? false : options.ignoreRoads,
+    ignoreCreeps: options.ignoreCreeps === undefined ? true : options.ignoreCreeps,
+    moveModifier: options.moveModifier === undefined ? 1 : options.moveModifier,
+    range: options.range === undefined ? 1 : options.range
   };
   const path = pathsCache({ ...data, key: key(data) }, 7);
   if (options.visualizePathStyle) {

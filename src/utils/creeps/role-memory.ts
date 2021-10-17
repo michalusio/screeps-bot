@@ -6,6 +6,7 @@ export interface CreepRoleMemory extends CreepMemory {
   role: string;
   newCreep?: boolean;
   state: string;
+  _travel?: RoomPosition[];
 }
 
 export interface CreepRemoteMemory extends CreepRoleMemory {
@@ -37,6 +38,9 @@ function stateVisualizer(state: string, creep: Creep) {
       creep.say("🚚");
       break;
     case "storing":
+      creep.say("📦");
+      break;
+    case "hauling":
       creep.say("📦");
       break;
     case "sourcing":

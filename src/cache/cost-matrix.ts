@@ -3,7 +3,10 @@ import { cacheForKey } from "./cache-util";
 import { creepMyAndPositions } from "./creep-cache";
 import { constructionSites, structures } from "./structure-cache";
 
-const costMatrixTerrainCache = cacheForKey("cost matrix terrain", roomName => {
+const costMatrixTerrainCache = cacheForKey("cost matrix terrain", (roomNameAndMod: `${string}|${number}`) => {
+  const [roomName, mod] = roomNameAndMod.split("|");
+  const modifier = mod ? parseFloat(mod) : 0;
+  console.log(modifier);
   const matrix = new PathFinder.CostMatrix();
   const terrain = Game.map.getRoomTerrain(roomName);
   for (let x = 0; x < 50; x++) {
@@ -13,10 +16,10 @@ const costMatrixTerrainCache = cacheForKey("cost matrix terrain", roomName => {
           matrix.set(x, y, 255);
           break;
         case TERRAIN_MASK_SWAMP:
-          matrix.set(x, y, 10);
+          matrix.set(x, y, 1 + 9 * modifier);
           break;
         case 0:
-          matrix.set(x, y, 2);
+          matrix.set(x, y, 1 + modifier);
           break;
       }
     }
@@ -24,9 +27,9 @@ const costMatrixTerrainCache = cacheForKey("cost matrix terrain", roomName => {
   return matrix;
 });
 
-export const costMatrixCache = cacheForKey("cost matrix", (data: `${string}|${boolean}|${boolean}`) => {
-  const [roomName, ignoreRoads, ignoreCreeps] = data.split("|");
-  let matrix = costMatrixTerrainCache(roomName, 999999);
+export const costMatrixCache = cacheForKey("cost matrix", (data: `${string}|${boolean}|${boolean}|${number}`) => {
+  const [roomName, ignoreRoads, ignoreCreeps, moveMod] = data.split("|");
+  let matrix = costMatrixTerrainCache(`${roomName}|${moveMod}` as `${string}|${number}`, 999999);
   const room = Game.rooms[roomName];
   if (!room) return matrix;
   matrix = matrix.clone();

@@ -77,7 +77,6 @@ export function wrapWithStages(loop: (creepCount: CreepCounter) => void): (creep
 
       const [nextRequirements, placementsToPlace] = getNextStageDelta(stageIndex, room, stages, roomCounter);
       if (placementsToPlace.length > 0 && room.find(FIND_MY_CONSTRUCTION_SITES).length === 0) {
-        console.log(`Room ${room.name} placing ${placementsToPlace[0].name}`);
         placementsToPlace[0].place(room);
       }
 

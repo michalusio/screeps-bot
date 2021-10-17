@@ -52,6 +52,9 @@ if (!Memory.visuals) {
 if (!Memory.scoutData) {
   Memory.scoutData = {};
 }
+if (!Memory.rooms) {
+  Memory.rooms = {};
+}
 Memory.afterReset = true;
 
 export const loop = (): void => {
@@ -59,6 +62,9 @@ export const loop = (): void => {
   Object.keys(cacheHits).forEach(key => (cacheHits[key] = { hits: 0, cpu: 0 }));
   body();
   grafana();
+  if (Game.cpu.getUsed() < Game.cpu.tickLimit - 100 && Game.cpu.generatePixel) {
+    Game.cpu.generatePixel();
+  }
   Memory.afterReset = false;
 };
 

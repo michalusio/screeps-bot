@@ -40,7 +40,7 @@ export const REPAIR_PRIORITY = {
   portal: 999
 };
 
-export const CIVILIZATION_MINIMUM_SPAWN_ENERGY = 200;
+export const CIVILIZATION_MINIMUM_SPAWN_ENERGY = 150;
 export const CIVILIZATION_STAGE_MODIFIER = 50;
 
 export const FILL_PRIORITY = {
