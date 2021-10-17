@@ -9,6 +9,7 @@ interface PathData {
   bPos: RoomPosition;
   ignoreCreeps: boolean;
   ignoreRoads: boolean;
+  ignoreContainers: boolean;
   moveModifier: number;
   range: number;
   visualizePathStyle?: PolyStyle;
@@ -29,12 +30,16 @@ const pathsCache = cacheForStruct<PathDataWithKey, RoomPosition[]>(
       {
         maxRooms: 1,
         roomCallback: roomName =>
-          costMatrixCache(`${roomName}|${struct.ignoreRoads}|${struct.ignoreCreeps}|${struct.moveModifier}`, 13),
+          costMatrixCache(
+            `${roomName}|${struct.ignoreRoads}|${struct.ignoreCreeps}|${struct.ignoreContainers}|${struct.moveModifier}`,
+            13
+          ),
         maxOps: 1000,
         heuristicWeight: 1.25
       }
     );
     const path = pathResult.incomplete ? [] : pathResult.path;
+    console.log(path.length);
     return path;
   },
   "key"
@@ -43,9 +48,10 @@ const pathsCache = cacheForStruct<PathDataWithKey, RoomPosition[]>(
 export function getPathFromCache(
   a: RoomPosition | _HasRoomPosition,
   b: RoomPosition | _HasRoomPosition,
-  options: MoveToOpts & { moveModifier?: number } = {
+  options: MoveToOpts & { moveModifier?: number; ignoreContainers?: boolean } = {
     ignoreRoads: false,
     ignoreCreeps: true,
+    ignoreContainers: false,
     range: 1,
     moveModifier: 1,
     visualizePathStyle: undefined
@@ -59,6 +65,7 @@ export function getPathFromCache(
     bPos,
     ignoreRoads: options.ignoreRoads === undefined ? false : options.ignoreRoads,
     ignoreCreeps: options.ignoreCreeps === undefined ? true : options.ignoreCreeps,
+    ignoreContainers: options.ignoreContainers === undefined ? false : options.ignoreContainers,
     moveModifier: options.moveModifier === undefined ? 1 : options.moveModifier,
     range: options.range === undefined ? 1 : options.range
   };

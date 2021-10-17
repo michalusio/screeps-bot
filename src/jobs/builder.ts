@@ -81,7 +81,7 @@ export function builderBehavior(creep: Creep): void {
         creepMemory.buildPoint = site.id;
         if (builder.store.getUsedCapacity(RESOURCE_ENERGY) <= 0) {
           const energySpot = site.pos.lookFor(LOOK_ENERGY);
-          if (energySpot.length > 0) {
+          if (energySpot.length > 0 && energySpot[0].amount > 50) {
             tryDoOrMove(
               () => builder.pickup(energySpot[0]),
               builder.travelTo(site, undefined, { range: 1 }),

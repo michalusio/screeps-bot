@@ -321,7 +321,7 @@ function showScoutVisuals() {
 function showSpawnVisuals() {
   if (!Memory.visualizer) return;
   Memory.visualizer.forEach(room => {
-    const matrix = costMatrixCache(`${room}|false|false|1`, 13);
+    const matrix = costMatrixCache(`${room}|false|false|false|1`, 13);
     for (let x = 0; x < 50; x++) {
       for (let y = 0; y < 50; y++) {
         const pos = new RoomPosition(x, y, room);

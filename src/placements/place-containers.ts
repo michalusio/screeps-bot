@@ -1,25 +1,44 @@
-import { sources, sourcesAndMineral } from "cache/source-cache";
+import { sourcesAndMineral } from "cache/source-cache";
 import { mySpawns, structures } from "cache/structure-cache";
 import { Placement } from "./placement";
 
-export const placeContainers: Placement = {
-  name: "Place Containers",
+export const placeSourceContainers: Placement = {
+  name: "Place Source Containers",
   isPlaced: (room: Room) => {
-    return structures(room, 10).filter(s => s.structureType === STRUCTURE_CONTAINER).length > 3;
+    const sourcesList = sourcesAndMineral(room, 1000).filter(
+      s => s instanceof Source || s.pos.lookFor(LOOK_STRUCTURES).some(s => s.structureType === STRUCTURE_EXTRACTOR)
+    );
+    return structures(room, 10).filter(s => s.structureType === STRUCTURE_CONTAINER).length >= sourcesList.length;
   },
   place: (room: Room) => {
-    placeControllerContainer(room);
-    placeSourceContainers(room);
+    placeSourceContainersFunc(room);
   }
 };
 
-function placeControllerContainer(room: Room): void {
+export const placeControllerContainers: Placement = {
+  name: "Place Controller Containers",
+  isPlaced: (room: Room) => {
+    const sourcesList = sourcesAndMineral(room, 1000).filter(
+      s => s instanceof Source || s.pos.lookFor(LOOK_STRUCTURES).some(s => s.structureType === STRUCTURE_EXTRACTOR)
+    );
+    return structures(room, 10).filter(s => s.structureType === STRUCTURE_CONTAINER).length > sourcesList.length;
+  },
+  place: (room: Room) => {
+    placeControllerContainerFunc(room);
+  }
+};
+
+function placeControllerContainerFunc(room: Room): void {
   const controller = room.controller;
   if (!controller) return;
   const controllerPos = controller.pos;
   const containerPlaces = controller.pos
     .getAround(2)
     .filter(p => p.getRangeTo(controller) > 1)
+    .map(p => {
+      room.visual.circle(p, { fill: "transparent", radius: 0.5, stroke: "#ffffff", strokeWidth: 0.1 });
+      return p;
+    })
     .map(
       p =>
         [p, p.findInRange(FIND_STRUCTURES, 1).filter(s => s.structureType === STRUCTURE_ROAD).length] as [
@@ -43,7 +62,7 @@ function placeControllerContainer(room: Room): void {
   firstSortedPlace[0].createConstructionSite(STRUCTURE_CONTAINER);
 }
 
-function placeSourceContainers(room: Room): void {
+function placeSourceContainersFunc(room: Room): void {
   const sourcesList = sourcesAndMineral(room, 1000).filter(
     s => s instanceof Source || s.pos.lookFor(LOOK_STRUCTURES).some(s => s.structureType === STRUCTURE_EXTRACTOR)
   );

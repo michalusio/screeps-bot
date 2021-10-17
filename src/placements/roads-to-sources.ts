@@ -13,7 +13,7 @@ export const roadsToSources: Placement = {
       )
       .every(source => {
         return spawns.every(spawn => {
-          return getPathFromCache(spawn, source, { ignoreRoads: false, moveModifier: 0 })
+          return getPathFromCache(spawn, source, { ignoreRoads: false, ignoreContainers: true })
             .filter(pos => !pos.isBorderCell())
             .every(pos => pos.isEqualTo(spawn) || pos.isEqualTo(source) || !pos.isEmpty());
         });
@@ -27,7 +27,7 @@ export const roadsToSources: Placement = {
       )
       .forEach(source => {
         spawns.forEach(spawn => {
-          getPathFromCache(spawn, source, { ignoreRoads: false, moveModifier: 0 })
+          getPathFromCache(spawn, source, { ignoreRoads: false, ignoreContainers: true })
             .filter(pos => pos.isEmpty() && !pos.isBorderCell() && !pos.isEqualTo(spawn) && !pos.isEqualTo(source))
             .forEach(pos => pos.createConstructionSite(STRUCTURE_ROAD));
         });

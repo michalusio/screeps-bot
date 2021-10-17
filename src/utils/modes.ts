@@ -1,5 +1,5 @@
 import { extensionPlacer } from "placements/extension-placement";
-import { placeContainers } from "placements/place-containers";
+import { placeControllerContainers, placeSourceContainers } from "placements/place-containers";
 import { Placement } from "placements/placement";
 import { placeTower } from "placements/place-tower";
 import { rcl } from "placements/rcl";
@@ -43,8 +43,11 @@ export const Bootstrap = {
       { roles: { miner: 2, hauler: 2, upgrader: 1 } },
       { roles: { defender: anyEnemies } },
       { roles: { upgrader: fullRCL ? 1 : 2, builder: builderMod }, structures: [rcl(2), extensionPlacer(5)] },
-      { roles: { builder: 2 * builderMod, remoteminer: 1 }, structures: [roadsToSources, placeContainers] },
-      { roles: { towerbro: 1 }, structures: [roadsToController, rcl(3), extensionPlacer(10)] },
+      { roles: { builder: 2 * builderMod, remoteminer: 1 }, structures: [roadsToSources, placeSourceContainers] },
+      {
+        roles: { towerbro: 1 },
+        structures: [roadsToController, placeControllerContainers, rcl(3), extensionPlacer(10)]
+      },
       { roles: { hauler: 2 + energyLayingAroundMod }, structures: [placeTower(1)] },
       { roles: { remoteminer: 2 }, structures: [roadsBetweenSources] },
       { roles: { remoteminer: 4, upgrader: fullRCL ? 1 : 3 }, structures: [roadsToExits, rcl(4), extensionPlacer(20)] },

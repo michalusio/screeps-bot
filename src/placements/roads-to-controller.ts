@@ -8,7 +8,7 @@ export const roadsToController: Placement = {
     if (!room.controller) return true;
     const controller = room.controller;
     return mySpawns(room).every(spawn => {
-      return getPathFromCache(spawn, controller, { ignoreRoads: false })
+      return getPathFromCache(spawn, controller, { ignoreRoads: false, ignoreContainers: false })
         .filter(pos => !pos.isBorderCell())
         .every(pos => pos.isEqualTo(spawn) || pos.isEqualTo(controller) || !pos.isEmpty());
     });
@@ -17,7 +17,7 @@ export const roadsToController: Placement = {
     if (!room.controller) return;
     const controller = room.controller;
     mySpawns(room).forEach(spawn => {
-      getPathFromCache(spawn, controller, { ignoreRoads: false })
+      getPathFromCache(spawn, controller, { ignoreRoads: false, ignoreContainers: false })
         .filter(pos => pos.isEmpty() && !pos.isBorderCell() && !pos.isEqualTo(spawn) && !pos.isEqualTo(controller))
         .forEach(pos => pos.createConstructionSite(STRUCTURE_ROAD));
     });

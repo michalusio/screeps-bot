@@ -6,7 +6,7 @@ export const roadsToExits: Placement = {
   isPlaced: (room: Room) => {
     const nearestExits = directionExitsFromSpawn(room, 500);
     return nearestExits.every(([spawn, exit]) => {
-      return getPathFromCache(spawn, exit, { ignoreRoads: false, moveModifier: 0 })
+      return getPathFromCache(spawn, exit, { ignoreRoads: false })
         .filter(pos => !pos.isBorderCell())
         .every(pos => pos.isEqualTo(spawn) || pos.isEqualTo(exit) || pos.hasRoad() || !pos.isEmpty());
     });
@@ -14,7 +14,7 @@ export const roadsToExits: Placement = {
   place: (room: Room) => {
     const nearestExits = directionExitsFromSpawn(room, 500);
     nearestExits.forEach(([spawn, exit]) =>
-      getPathFromCache(spawn, exit, { ignoreRoads: false, moveModifier: 0 })
+      getPathFromCache(spawn, exit, { ignoreRoads: false })
         .filter(pos => pos.isEmpty() && !pos.isBorderCell())
         .forEach(pos => pos.createConstructionSite(STRUCTURE_ROAD))
     );

@@ -469,7 +469,7 @@ export function injectMethods(): void {
           range: 1,
           visualizePathStyle: { stroke: "#" + hash.toString(16) },
           ...(options ?? {})
-        }).slice(0, 5);
+        }).slice(0, options?.reusePath === undefined ? 8 : options?.reusePath);
       }
       const pathMove = this.moveByPath(this.roleMemory._travel.map(p => new RoomPosition(p.x, p.y, p.roomName)));
       if (pathMove === ERR_NOT_FOUND) {
@@ -512,7 +512,7 @@ export function injectMethods(): void {
         range: 0,
         visualizePathStyle: { stroke: "#" + hash.toString(16) },
         ...(options ?? {})
-      });
+      }).slice(0, options?.reusePath == null ? 8 : options?.reusePath);
     }
     const pathMove = this.moveByPath(this.roleMemory._travel.map(p => new RoomPosition(p.x, p.y, p.roomName)));
     if (pathMove === ERR_NOT_FOUND) {

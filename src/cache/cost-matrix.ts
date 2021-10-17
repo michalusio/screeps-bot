@@ -6,7 +6,6 @@ import { constructionSites, structures } from "./structure-cache";
 const costMatrixTerrainCache = cacheForKey("cost matrix terrain", (roomNameAndMod: `${string}|${number}`) => {
   const [roomName, mod] = roomNameAndMod.split("|");
   const modifier = mod ? parseFloat(mod) : 0;
-  console.log(modifier);
   const matrix = new PathFinder.CostMatrix();
   const terrain = Game.map.getRoomTerrain(roomName);
   for (let x = 0; x < 50; x++) {
@@ -27,37 +26,46 @@ const costMatrixTerrainCache = cacheForKey("cost matrix terrain", (roomNameAndMo
   return matrix;
 });
 
-export const costMatrixCache = cacheForKey("cost matrix", (data: `${string}|${boolean}|${boolean}|${number}`) => {
-  const [roomName, ignoreRoads, ignoreCreeps, moveMod] = data.split("|");
-  let matrix = costMatrixTerrainCache(`${roomName}|${moveMod}` as `${string}|${number}`, 999999);
-  const room = Game.rooms[roomName];
-  if (!room) return matrix;
-  matrix = matrix.clone();
-  if (ignoreCreeps === "false") {
-    creepMyAndPositions(room, 7).forEach(c => {
-      if (c.my) matrix.set(c.pos.x, c.pos.y, MY_CREEP_PATH_COST);
-      else c.pos.getAround(HOSTILE_CREEP_AVOID_ZONE_SIZE).forEach(pos => matrix.set(pos.x, pos.y, 254));
-    });
-  }
-  structures(room, 31).forEach(s => {
-    if (s.structureType === STRUCTURE_ROAD) {
-      if (ignoreRoads === "false" && matrix.get(s.pos.x, s.pos.y) < 50) {
-        // Favor roads over plain tiles
-        matrix.set(s.pos.x, s.pos.y, 1);
-      }
-    } else if (s.structureType !== STRUCTURE_CONTAINER && s.structureType !== STRUCTURE_RAMPART) {
-      // Can't walk through non-walkable buildings
-      matrix.set(s.pos.x, s.pos.y, 255);
+export const costMatrixCache = cacheForKey(
+  "cost matrix",
+  (data: `${string}|${boolean}|${boolean}|${boolean}|${number}`) => {
+    const [roomName, ir, icr, ico, moveMod] = data.split("|");
+    const ignoreRoads = ir === "true";
+    const ignoreCreeps = icr === "true";
+    const ignoreContainers = ico === "true";
+    const moveModifier = moveMod ? parseFloat(moveMod) : 0;
+    let matrix = costMatrixTerrainCache(`${roomName}|${moveMod}` as `${string}|${number}`, 999999);
+    const room = Game.rooms[roomName];
+    if (!room) return matrix;
+    matrix = matrix.clone();
+    if (!ignoreCreeps) {
+      creepMyAndPositions(room, 7).forEach(c => {
+        if (c.my) matrix.set(c.pos.x, c.pos.y, MY_CREEP_PATH_COST);
+        else c.pos.getAround(HOSTILE_CREEP_AVOID_ZONE_SIZE).forEach(pos => matrix.set(pos.x, pos.y, 254));
+      });
     }
-  });
-  constructionSites(room, 31)
-    .filter(
-      s =>
-        s.structureType !== STRUCTURE_RAMPART &&
-        s.structureType !== STRUCTURE_CONTAINER &&
-        s.structureType !== STRUCTURE_ROAD
-    )
-    .forEach(s => matrix.set(s.pos.x, s.pos.y, 255));
+    structures(room, 31).forEach(s => {
+      if (s.structureType === STRUCTURE_ROAD) {
+        if (!ignoreRoads && matrix.get(s.pos.x, s.pos.y) < 11) {
+          // Favor roads over plain tiles
+          matrix.set(s.pos.x, s.pos.y, moveModifier);
+        }
+      } else if (s.structureType !== STRUCTURE_CONTAINER && s.structureType !== STRUCTURE_RAMPART) {
+        // Can't walk through non-walkable buildings
+        matrix.set(s.pos.x, s.pos.y, 255);
+      } else if (!ignoreContainers && s.structureType === STRUCTURE_CONTAINER) {
+        matrix.set(s.pos.x, s.pos.y, 5);
+      }
+    });
+    constructionSites(room, 31)
+      .filter(
+        s =>
+          s.structureType !== STRUCTURE_RAMPART &&
+          s.structureType !== STRUCTURE_CONTAINER &&
+          s.structureType !== STRUCTURE_ROAD
+      )
+      .forEach(s => matrix.set(s.pos.x, s.pos.y, 255));
 
-  return matrix;
-});
+    return matrix;
+  }
+);

@@ -10,7 +10,7 @@ export const roadsBetweenSources: Placement = {
       return sourcesList.every(source2 => {
         return (
           source1 === source2 ||
-          getPathFromCache(source2, source1).every(
+          getPathFromCache(source2, source1, { ignoreRoads: false, ignoreContainers: true }).every(
             pos => pos.isEqualTo(source2) || pos.isEqualTo(source1) || !pos.isEmpty() || !pos.canBuild()
           )
         );
@@ -22,7 +22,7 @@ export const roadsBetweenSources: Placement = {
     sourcesList.forEach(source1 => {
       sourcesList.forEach(source2 => {
         if (source1 === source2) return;
-        getPathFromCache(source2, source1)
+        getPathFromCache(source2, source1, { ignoreRoads: false, ignoreContainers: true })
           .filter(pos => pos.isEmpty() && pos.canBuild() && !pos.isEqualTo(source2) && !pos.isEqualTo(source1))
           .forEach(pos => pos.createConstructionSite(STRUCTURE_ROAD));
       });

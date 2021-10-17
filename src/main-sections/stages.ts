@@ -164,6 +164,9 @@ function getNextStageDelta(
   const nextRequirements: RoleRequirements = {};
   for (const role in { ...currentStage, ...nextStage.roles }) {
     nextRequirements[role] = Math.max(0, (nextStage.roles[role] ?? 0) - (creepCount.perRole[role] ?? 0));
+    if (nextRequirements[role] === 0) {
+      delete nextRequirements[role];
+    }
   }
   return [
     nextRequirements,
