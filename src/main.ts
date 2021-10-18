@@ -17,6 +17,8 @@ import { cacheHits } from "cache/cache-util";
 
 let creepActionsTimings: { [role: string]: [number, number] } = {};
 
+Memory.afterReset = true;
+
 injectMethods();
 
 initMemHack();
@@ -55,7 +57,6 @@ if (!Memory.scoutData) {
 if (!Memory.rooms) {
   Memory.rooms = {};
 }
-Memory.afterReset = true;
 
 export const loop = (): void => {
   Memory.timings = {};

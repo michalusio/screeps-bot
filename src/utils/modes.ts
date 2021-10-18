@@ -38,6 +38,7 @@ export const Bootstrap = {
     const builderMod = constructionSites(room, 50).length > 0 ? 1 : 0;
     const energyLayingAroundMod = Math.min(2, Math.floor(_.sum(droppedEnergy(room, 1), e => e.amount) / 750));
     const fullRCL = (room.controller?.level ?? -1) === 8;
+    const RCL3 = (room.controller?.level ?? -1) <= 3;
     return [
       { roles: { miner: 1, hauler: 1 } },
       { roles: { miner: 2, hauler: 2, upgrader: 1 } },
@@ -45,12 +46,12 @@ export const Bootstrap = {
       { roles: { upgrader: fullRCL ? 1 : 2, builder: builderMod }, structures: [rcl(2), extensionPlacer(5)] },
       { roles: { builder: 2 * builderMod, remoteminer: 1 }, structures: [roadsToSources, placeSourceContainers] },
       {
-        roles: { towerbro: 1 },
+        roles: { towerbro: 1, upgrader: fullRCL ? 1 : RCL3 ? 5 : 3, hauler: 2 + energyLayingAroundMod },
         structures: [roadsToController, placeControllerContainers, rcl(3), extensionPlacer(10)]
       },
       { roles: { hauler: 2 + energyLayingAroundMod }, structures: [placeTower(1)] },
       { roles: { remoteminer: 2 }, structures: [roadsBetweenSources] },
-      { roles: { remoteminer: 4, upgrader: fullRCL ? 1 : 3 }, structures: [roadsToExits, rcl(4), extensionPlacer(20)] },
+      { roles: { remoteminer: 4 }, structures: [roadsToExits, rcl(4), extensionPlacer(20)] },
       { roles: { remoteminer: 6, scout: 1 }, structures: [storage, placeTower(2), rcl(5), link, extensionPlacer(30)] }
     ];
   }

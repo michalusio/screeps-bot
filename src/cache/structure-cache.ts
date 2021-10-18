@@ -57,7 +57,8 @@ const freeEnergyContainersCache = cacheForRoom("free energy containers", room =>
         ? s.store.getFreeCapacity(RESOURCE_ENERGY) > 30
         : s.structureType === "storage"
         ? s.store.getUsedCapacity(RESOURCE_ENERGY) < STORAGE_QUOTAS[RESOURCE_ENERGY]
-        : s.store.getFreeCapacity(RESOURCE_ENERGY) > 0
+        : sourcesAndMineral(room, 5).every(sm => !sm.pos.isNearTo(s.pos)) &&
+          s.store.getFreeCapacity(RESOURCE_ENERGY) > 0
     )
   ).map(s => s.id)
 );

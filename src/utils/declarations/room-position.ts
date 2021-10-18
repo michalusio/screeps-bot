@@ -10,6 +10,7 @@ declare global {
     canBuild(): boolean;
     isEmpty(): boolean;
     hasRoad(): boolean;
+    areEqual(pos: RoomPosition): boolean;
     _isEmpty?: boolean;
     _hasRoad?: boolean;
     _tick?: number;
@@ -32,6 +33,10 @@ export function injectRoomPositionMethods(): void {
       true
     );
     return 9 - _.sum(area, l => (l.terrain === "wall" || l.creep != null ? 1 : 0));
+  };
+
+  RoomPosition.prototype.areEqual = function (pos: RoomPosition): boolean {
+    return pos && this.x === pos.x && this.y === pos.y && this.roomName === pos.roomName;
   };
 
   RoomPosition.prototype.getEmptyAround = function (): RoomPosition[] {

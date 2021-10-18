@@ -32,14 +32,13 @@ const pathsCache = cacheForStruct<PathDataWithKey, RoomPosition[]>(
         roomCallback: roomName =>
           costMatrixCache(
             `${roomName}|${struct.ignoreRoads}|${struct.ignoreCreeps}|${struct.ignoreContainers}|${struct.moveModifier}`,
-            13
+            7
           ),
         maxOps: 1000,
         heuristicWeight: 1.25
       }
     );
     const path = pathResult.incomplete ? [] : pathResult.path;
-    console.log(path.length);
     return path;
   },
   "key"

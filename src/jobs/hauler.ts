@@ -122,7 +122,7 @@ export function haulerBehavior(creep: Creep): void {
                   creepMemory.containerPoint = container.id;
                   tryDoOrMove(
                     () => hauler.withdraw(container, RESOURCE_ENERGY),
-                    hauler.travelTo(container, avoidSources, { ignoreCreeps: true }),
+                    hauler.travelTo(container, avoidSources, { ignoreCreeps: true, ignoreContainers: false }),
                     hauler,
                     container
                   );
@@ -153,7 +153,7 @@ export function haulerBehavior(creep: Creep): void {
         creepMemory.storagePoint = storage.id;
         const transferCode = tryDoOrMove(
           () => hauler.transfer(storage, RESOURCE_ENERGY),
-          hauler.travelTo(storage, avoidSources, { ignoreCreeps: true }),
+          hauler.travelTo(storage, avoidSources, { ignoreCreeps: false, ignoreContainers: false }),
           hauler,
           storage
         );
