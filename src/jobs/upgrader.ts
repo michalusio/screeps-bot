@@ -39,10 +39,8 @@ export function upgraderBehavior(creep: Creep): void {
         if (
           tryDoOrMove(
             () => upgrader.withdraw(source, RESOURCE_ENERGY),
-            upgrader.travelTo(source, undefined, { ignoreCreeps: false, ignoreRoads: false }),
-            upgrader,
-            source
-          ) !== OK
+            upgrader.travelTo(source, undefined, { ignoreCreeps: false, ignoreRoads: false, ignoreContainers: false })
+          ) < 0
         ) {
           changeState("sourcing", upgrader);
           upgrader.wander();
@@ -60,17 +58,21 @@ export function upgraderBehavior(creep: Creep): void {
         if (!controller.sign || controller.sign.text !== "MichA_I. All your base are belong to us.") {
           tryDoOrMove(
             () => upgrader.signController(controller, "MichA_I. All your base are belong to us."),
-            upgrader.travelTo(controller, undefined, { ignoreCreeps: false, ignoreRoads: false }),
-            upgrader,
-            controller
+            upgrader.travelTo(controller, undefined, {
+              ignoreCreeps: false,
+              ignoreRoads: false,
+              ignoreContainers: false
+            })
           );
         } else {
           tryDoOrMove(
             () => upgrader.upgradeController(controller),
-            upgrader.travelTo(controller, undefined, { range: 1, ignoreCreeps: false, ignoreRoads: false }),
-            upgrader,
-            controller,
-            2
+            upgrader.travelTo(controller, undefined, {
+              range: 1,
+              ignoreCreeps: false,
+              ignoreRoads: false,
+              ignoreContainers: false
+            })
           );
         }
         if (upgrader.store.getUsedCapacity(RESOURCE_ENERGY) <= 0) {

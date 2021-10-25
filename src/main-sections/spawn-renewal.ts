@@ -10,7 +10,7 @@ export function renewIfNotBusy(): void {
         mode: "Bootstrap",
         orders: {},
         prioritizeBuilding: true,
-        wallRepairs: false
+        wallRepairs: 100
       };
     }
     if (spawn.spawning) {

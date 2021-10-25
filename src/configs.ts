@@ -21,9 +21,9 @@ export const REPAIR_PRIORITY = {
 
   storage: 25,
   link: 25,
-  constructedWall: 25,
 
   rampart: 30,
+  constructedWall: 30,
 
   observer: 50,
   powerSpawn: 50,
@@ -53,7 +53,14 @@ export const TREATED_AS_FREE_TILE: LookConstant[] = [
 export const CIVILIZATION_MINIMUM_SPAWN_ENERGY = 150;
 export const CIVILIZATION_STAGE_MODIFIER = 50;
 
+export const HAUL_PRIORITY = {
+  droppedEnergy: 0,
+  tombstone: 1,
+  container: 2
+};
+
 export const FILL_PRIORITY = {
+  tower: 0,
   spawn: 1,
   extension: 2,
   terminal: 3,
@@ -86,10 +93,10 @@ export const BODYPART_PRIORITY: { [key: string]: number } = {
 };
 
 export const PLACEMENT_CACHE_TIME = 10;
-export const USABLE_SPAWN_AREA = 4;
+export const USABLE_SPAWN_AREA = 2;
 export const NEW_COLONY_SPAWN_SIZE = 6;
 
-export const MY_CREEP_PATH_COST = 150;
+export const MY_CREEP_PATH_COST = 255;
 export const HOSTILE_CREEP_AVOID_ZONE_SIZE = 2;
 
 export const ATTACKER_SQUAD_SIZE = 3;

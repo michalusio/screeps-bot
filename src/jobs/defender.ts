@@ -87,9 +87,9 @@ export function defenderBehavior(creep: Creep): void {
         const enemy2 = creep.pos.findClosestByRange(FIND_HOSTILE_CREEPS);
         if (enemy2 && enemy2?.pos.getRangeTo(creep.pos) < enemy.pos.getRangeTo(creep.pos) / 2) {
           creepMemory.attackTarget = enemy2.id;
-          tryDoOrMove(() => creep.attack(enemy2), creep.travelTo(enemy2), creep, enemy2);
+          tryDoOrMove(() => creep.attack(enemy2), creep.travelTo(enemy2));
         } else {
-          tryDoOrMove(() => creep.attack(enemy), creep.travelTo(enemy), creep, enemy);
+          tryDoOrMove(() => creep.attack(enemy), creep.travelTo(enemy));
         }
       }
       break;

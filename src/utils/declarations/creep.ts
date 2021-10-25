@@ -36,13 +36,17 @@ export function injectCreepMethods(): void {
     avoid?: (room: Room) => RoomPosition[],
     options?: (MoveToOpts & { moveModifier?: number; ignoreContainers?: boolean }) | undefined
   ): () => MoveToReturnCode {
-    const targeted = target instanceof RoomPosition ? target : target.pos;
     const hash = (this.roleMemory.role.hashCode() >> 8) & 0xffffff;
     return () => {
+      const targeted = target instanceof RoomPosition ? target : target.pos;
       if (this.pos.isNearTo(targeted)) return OK;
-      if (!this.roleMemory._travel || this.pos.areEqual(_.last(this.roleMemory._travel))) {
-        this.roleMemory._travel = Object.assign(
-          getPathFromCache(this.pos, targeted, {
+      if (
+        !this.roleMemory._travel ||
+        this.pos.areEqual(_.last(this.roleMemory._travel.path)) ||
+        !targeted.areEqual(this.roleMemory._travel.target)
+      ) {
+        this.roleMemory._travel = {
+          path: getPathFromCache(this.pos, targeted, {
             ignoreRoads: false,
             ignoreCreeps: false,
             moveModifier: this.moveModifier(),
@@ -50,11 +54,13 @@ export function injectCreepMethods(): void {
             visualizePathStyle: { stroke: "#" + hash.toString(16) },
             ...(options ?? {})
           }).slice(0, options?.reusePath === undefined ? 8 : options?.reusePath),
-          { prevPos: this.pos, waitTime: 0 }
-        );
+          prevPos: this.pos,
+          waitTime: 0,
+          target: targeted
+        };
       }
       let pathMove: CreepMoveReturnCode | ERR_NO_PATH | ERR_NOT_FOUND | ERR_INVALID_ARGS | ERR_INVALID_TARGET =
-        this.moveByPath(this.roleMemory._travel.map(p => new RoomPosition(p.x, p.y, p.roomName)));
+        this.moveByPath(this.roleMemory._travel.path.map(p => new RoomPosition(p.x, p.y, p.roomName)));
       switch (pathMove) {
         case ERR_NOT_FOUND:
           this.roleMemory._travel = undefined;
@@ -78,7 +84,7 @@ export function injectCreepMethods(): void {
           break;
         }
         case OK:
-          if (this.pos.areEqual(_.last(this.roleMemory._travel))) {
+          if (this.pos.areEqual(_.last(this.roleMemory._travel.path))) {
             this.roleMemory._travel = undefined;
           }
           break;
@@ -86,9 +92,9 @@ export function injectCreepMethods(): void {
       if (this.roleMemory._travel) {
         if (this.pos.areEqual(this.roleMemory._travel.prevPos)) {
           this.roleMemory._travel.waitTime++;
-          if (this.roleMemory._travel.waitTime > 3) {
+          if (this.roleMemory._travel.waitTime > 5) {
             this.roleMemory._travel = undefined;
-            console.log("Miarka się przebrała");
+            console.log(`${this.name} is has enough of this pathing`);
           }
         } else {
           this.roleMemory._travel.waitTime = 0;
@@ -106,9 +112,13 @@ export function injectCreepMethods(): void {
   ): MoveToReturnCode {
     const targeted = target instanceof RoomPosition ? target : target.pos;
     const hash = (this.roleMemory.role.hashCode() >> 8) & 0xffffff;
-    if (!this.roleMemory._travel || this.pos.areEqual(_.last(this.roleMemory._travel))) {
-      this.roleMemory._travel = Object.assign(
-        getPathFromCache(this.pos, targeted, {
+    if (
+      !this.roleMemory._travel ||
+      this.pos.areEqual(_.last(this.roleMemory._travel.path)) ||
+      !targeted.areEqual(this.roleMemory._travel.target)
+    ) {
+      this.roleMemory._travel = {
+        path: getPathFromCache(this.pos, targeted, {
           ignoreRoads: false,
           ignoreCreeps: false,
           moveModifier: this.moveModifier(),
@@ -116,11 +126,13 @@ export function injectCreepMethods(): void {
           visualizePathStyle: { stroke: "#" + hash.toString(16) },
           ...(options ?? {})
         }).slice(0, options?.reusePath == null ? 8 : options?.reusePath),
-        { prevPos: this.pos, waitTime: 0 }
-      );
+        prevPos: this.pos,
+        waitTime: 0,
+        target: targeted
+      };
     }
     let pathMove: CreepMoveReturnCode | ERR_NO_PATH | ERR_NOT_FOUND | ERR_INVALID_ARGS | ERR_INVALID_TARGET =
-      this.moveByPath(this.roleMemory._travel.map(p => new RoomPosition(p.x, p.y, p.roomName)));
+      this.moveByPath(this.roleMemory._travel.path.map(p => new RoomPosition(p.x, p.y, p.roomName)));
     switch (pathMove) {
       case ERR_NOT_FOUND:
         this.roleMemory._travel = undefined;
@@ -144,7 +156,7 @@ export function injectCreepMethods(): void {
         break;
       }
       case OK:
-        if (this.pos.areEqual(_.last(this.roleMemory._travel))) {
+        if (this.pos.areEqual(_.last(this.roleMemory._travel.path))) {
           this.roleMemory._travel = undefined;
         }
         break;
@@ -152,9 +164,9 @@ export function injectCreepMethods(): void {
     if (this.roleMemory._travel) {
       if (this.pos.areEqual(this.roleMemory._travel.prevPos)) {
         this.roleMemory._travel.waitTime++;
-        if (this.roleMemory._travel.waitTime > 3) {
+        if (this.roleMemory._travel.waitTime > 5) {
           this.roleMemory._travel = undefined;
-          console.log("Miarka się przebrała");
+          console.log(`${this.name} is has enough of this pathing`);
         }
       } else {
         this.roleMemory._travel.waitTime = 0;
@@ -171,10 +183,11 @@ export function injectCreepMethods(): void {
       (2 * (this.getActiveBodyparts(MOVE) ?? 1))
     );
   };
-
-  Object.defineProperty(Creep.prototype, "roleMemory", {
-    get: function roleMemory() {
-      return (this as Creep).memory as CreepRoleMemory;
-    }
-  });
+  if (!Creep.prototype.roleMemory) {
+    Object.defineProperty(Creep.prototype, "roleMemory", {
+      get: function roleMemory() {
+        return (this as Creep).memory as CreepRoleMemory;
+      }
+    });
+  }
 }

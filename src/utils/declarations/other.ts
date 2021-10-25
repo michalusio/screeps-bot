@@ -14,7 +14,6 @@ declare global {
   function order(roomName: string, role: string, howMany: number): void;
   function rally(color: ColorConstant, howMany: number): void;
   function minBy<T>(collection: T[], iteratee?: (val: T) => number): T | undefined;
-  function getRoomNameOnSide(name: string, side: ExitConstant): string | null;
   function showSpawnFor(room: string): void;
 }
 
@@ -64,58 +63,4 @@ export function injectOtherMethods(): void {
       _.take(attackerCreeps, howMany).forEach(c => ((c.roleMemory as AttackerMemory).squadColor = color));
     }
   };
-
-  global.getRoomNameOnSide = function (name: string, side: ExitConstant): string | null {
-    const parts = splitRoomName(name);
-    if (!parts) return null;
-    const we = parts[0] + parts[1];
-    const ns = parts[2] + parts[3];
-    switch (side) {
-      case 1:
-        if (parts[2] === "S") {
-          if (parts[3] === "0") {
-            return we + "N0";
-          } else {
-            return we + "S" + (parseInt(parts[3]) - 1).toString();
-          }
-        } else {
-          return we + "N" + (parseInt(parts[3]) + 1).toString();
-        }
-      case 3:
-        if (parts[0] === "W") {
-          if (parts[1] === "0") {
-            return "E0" + ns;
-          } else {
-            return "W" + (parseInt(parts[1]) - 1).toString() + ns;
-          }
-        } else {
-          return "E" + (parseInt(parts[1]) + 1).toString() + ns;
-        }
-      case 5:
-        if (parts[2] === "N") {
-          if (parts[3] === "0") {
-            return we + "S0";
-          } else {
-            return we + "N" + (parseInt(parts[3]) - 1).toString();
-          }
-        } else {
-          return we + "S" + (parseInt(parts[3]) + 1).toString();
-        }
-      case 7:
-        if (parts[0] === "E") {
-          if (parts[1] === "0") {
-            return "W0" + ns;
-          } else {
-            return "E" + (parseInt(parts[1]) - 1).toString() + ns;
-          }
-        } else {
-          return "W" + (parseInt(parts[1]) + 1).toString() + ns;
-        }
-    }
-  };
-}
-
-function splitRoomName(name: string): [string, string, string, string] | null {
-  const split = /^([WE])(\d+)([NS])(\d+)$/.exec(name);
-  return split ? [split[1], split[2], split[3], split[4]] : null;
 }

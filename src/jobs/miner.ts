@@ -48,9 +48,7 @@ export function minerBehavior(creep: Creep): void {
         }
         tryDoOrMove(
           () => miner.dismantle(dismantleStruct),
-          miner.travelTo(dismantleStruct, undefined, { ignoreCreeps: true }),
-          miner,
-          dismantleStruct
+          miner.travelTo(dismantleStruct, undefined, { ignoreCreeps: true })
         );
       }
       break;
@@ -84,17 +82,9 @@ export function minerBehavior(creep: Creep): void {
                 miner.travelInto(sourceContainer, undefined, {
                   ignoreCreeps: true,
                   visualizePathStyle: { stroke: "#ff0000" }
-                }),
-              miner,
-              source
+                })
             );
-          } else
-            tryDoOrMove(
-              () => miner.harvest(source),
-              miner.travelTo(source, undefined, { ignoreCreeps: true }),
-              miner,
-              source
-            );
+          } else tryDoOrMove(() => miner.harvest(source), miner.travelTo(source, undefined, { ignoreCreeps: true }));
         }
       }
       break;

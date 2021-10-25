@@ -38,8 +38,11 @@ export function wrapWithStages(loop: (creepCount: CreepCounter) => void): (creep
       if (!room.memory.mode) {
         room.memory.mode = Bootstrap.name;
       }
-      if (!room.memory.wallRepairs) {
-        room.memory.wallRepairs = false;
+      if (room.memory.wallRepairs === undefined) {
+        room.memory.wallRepairs = 100;
+      }
+      if (room.memory.prioritizeBuilding === undefined) {
+        room.memory.prioritizeBuilding = false;
       }
       if (!room.memory.children) {
         room.memory.children = [];
@@ -135,6 +138,7 @@ function spawnRequirement(spawn: StructureSpawn, requirements: RoleRequirements)
 function getCurrentStageIndex(room: Room, stages: Stage[], creepCount: RoomCreepCounter): number {
   let stageIndex = -1;
   for (const stage of stages) {
+    room.memory.wallRepairs = stage.wallRepair ?? room.memory.wallRepairs;
     for (const role in stage.roles) {
       if ((creepCount.perRole[role] ?? 0) < stage.roles[role]) {
         return stageIndex;
@@ -145,6 +149,7 @@ function getCurrentStageIndex(room: Room, stages: Stage[], creepCount: RoomCreep
     }
     stageIndex++;
   }
+  room.memory.wallRepairs = stages[stageIndex].wallRepair ?? room.memory.wallRepairs;
   return stageIndex;
 }
 

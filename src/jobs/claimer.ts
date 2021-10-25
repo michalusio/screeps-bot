@@ -52,14 +52,9 @@ export function claimerBehavior(creep: Creep): void {
             }
           }
           if (
-            tryDoOrMove(
-              () => claimer.claimController(controller),
-              claimer.travelTo(controller),
-              claimer,
-              controller
-            ) === ERR_GCL_NOT_ENOUGH
+            tryDoOrMove(() => claimer.claimController(controller), claimer.travelTo(controller)) === ERR_GCL_NOT_ENOUGH
           ) {
-            tryDoOrMove(() => claimer.reserveController(controller), claimer.travelTo(controller), claimer, controller);
+            tryDoOrMove(() => claimer.reserveController(controller), claimer.travelTo(controller));
           }
         } else {
           log(`Claimer ${claimer.name} cannot claim the room as it doesn't have the controller!`);
@@ -125,12 +120,7 @@ function getRoomToClaim(originRoom: string): string {
 }
 
 export function getAllure(averageDistance: number, data: ScoutData): number {
-  const adjacentRooms = [
-    getRoomNameOnSide(data.roomName, FIND_EXIT_TOP),
-    getRoomNameOnSide(data.roomName, FIND_EXIT_BOTTOM),
-    getRoomNameOnSide(data.roomName, FIND_EXIT_LEFT),
-    getRoomNameOnSide(data.roomName, FIND_EXIT_RIGHT)
-  ].filter(r => r != null) as string[];
+  const adjacentRooms = _.values<string>(Game.map.describeExits(data.roomName)).filter(r => r != null);
   const howManyAreMine = _.filter(
     adjacentRooms,
     r => Memory.rooms[r] && Object.keys(Memory.rooms[r]).length > 0
@@ -140,7 +130,7 @@ export function getAllure(averageDistance: number, data: ScoutData): number {
     Math.min(10, _.sum(data.enemies)) * -0.1 +
     data.sources * 0.2 +
     data.swampRatio * -0.1 +
-    Math.abs(data.wallRatio - 0.15) * -0.7 +
+    Math.abs(data.wallRatio - 0.15) * -0.7 -
     howManyAreMine * 0.2
   );
 }

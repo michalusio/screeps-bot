@@ -82,7 +82,7 @@ declare global {
   interface RoomMemory {
     civilizationLevel: number;
     orders: { [role: string]: number };
-    wallRepairs: boolean;
+    wallRepairs: number;
     prioritizeBuilding: boolean;
     mode: string;
     children: string[];
@@ -104,5 +104,12 @@ export function injectMethods(): void {
 
   String.prototype.hashCode = function (): number {
     return Array.from(this).reduce((s, c) => (Math.imul(31, s) + c.charCodeAt(0)) | 0, 0);
+  };
+
+  Array.prototype.flatMap = function <T, U>(callback: (value: T, index: number, array: T[]) => U[]): U[] {
+    return (this as Array<T>).reduce(
+      (acc, value, index, array) => acc.concat(callback(value, index, array)),
+      <Array<U>>[]
+    );
   };
 }

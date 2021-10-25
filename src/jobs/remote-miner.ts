@@ -1,4 +1,3 @@
-import { directionExitFromSpawn, exitsFromRoomToRoom } from "cache/path-cache";
 import { activeSources } from "cache/source-cache";
 import { hostileSpawns, mySpawns } from "cache/structure-cache";
 import { energyContainerNotFull, fillBody, getByIdOrNew, tryDoOrMove } from "utils/creeps";
@@ -15,8 +14,9 @@ export interface RemoteMinerMemory extends CreepRemoteMemory {
   sourceRoom?: string;
 
   storagePoint?: Id<StructureStorage | StructureSpawn | StructureContainer | StructureExtension>;
+  sourcePoint?: { x: number; y: number; roomName: string };
 
-  exitPosition?: { x: number; y: number; room: string };
+  exitPosition?: { x: number; y: number; roomName: string };
 
   state: "mining" | "hauling";
 }
@@ -28,6 +28,7 @@ export const remoteMinerMemory: RemoteMinerMemory = {
   role: "remoteminer",
   originRoom: "",
   sourceRoom: undefined,
+  sourcePoint: undefined,
   state: "mining"
 };
 
@@ -36,12 +37,9 @@ export function remoteMinerBehavior(creep: Creep): void {
   const creepMemory = remoteMiner.memory;
   if (creepMemory.sourceRoom === undefined) {
     creepMemory.sourceRoom = minBy(
-      [
-        getRoomNameOnSide(creepMemory.originRoom, FIND_EXIT_TOP),
-        getRoomNameOnSide(creepMemory.originRoom, FIND_EXIT_BOTTOM),
-        getRoomNameOnSide(creepMemory.originRoom, FIND_EXIT_LEFT),
-        getRoomNameOnSide(creepMemory.originRoom, FIND_EXIT_RIGHT)
-      ].filter(name => name != null && !Memory.noRemoteMining.includes(name)) as string[],
+      _.values<string>(Game.map.describeExits(creepMemory.originRoom)).filter(
+        name => name != null && !Memory.noRemoteMining.includes(name)
+      ),
       r =>
         Object.keys(Game.creeps)
           .map(c => Game.creeps[c])
@@ -70,35 +68,44 @@ export function remoteMinerBehavior(creep: Creep): void {
             creepMemory.sourceRoom = undefined;
             return;
           }
-          const source = minBy(activeSources(remoteMiner.room, 50), s => s.pos.getRangeTo(remoteMiner));
-          if (
-            source &&
-            tryDoOrMove(
-              () => remoteMiner.harvest(source),
-              remoteMiner.travelTo(source, undefined, { ignoreCreeps: false, ignoreRoads: false }),
-              remoteMiner,
-              source
-            ) === ERR_NOT_ENOUGH_RESOURCES
-          ) {
-            changeState("hauling", remoteMiner);
+          if (creepMemory.sourcePoint === undefined) {
+            creepMemory.sourcePoint =
+              remoteMiner.room.name === creepMemory.sourceRoom
+                ? minBy(activeSources(remoteMiner.room, 50), s => s.pos.getRangeTo(remoteMiner))?.pos
+                : undefined;
           }
-        } else {
-          if (!creepMemory.exitPosition || creepMemory.exitPosition.room !== remoteMiner.room.name) {
-            const exit = exitsFromRoomToRoom(remoteMiner.room.name, creepMemory.sourceRoom, 99999);
-            if (exit != ERR_NO_PATH && exit != ERR_INVALID_ARGS) {
-              const closestExit = _.first(directionExitFromSpawn(remoteMiner.room, exit, 500));
-              if (closestExit) {
-                creepMemory.exitPosition = { x: closestExit.x, y: closestExit.y, room: remoteMiner.room.name };
-              } else log(`Remote miner ${remoteMiner.name} can't find an exit to ${creepMemory.sourceRoom}`);
-            } else log(`Remote miner ${remoteMiner.name} can't find a path to ${creepMemory.sourceRoom}`);
-          }
-          if (creepMemory.exitPosition) {
-            const exitPos = creepMemory.exitPosition;
-            remoteMiner.travelInto(new RoomPosition(exitPos.x, exitPos.y, remoteMiner.room.name), undefined, {
-              ignoreCreeps: false,
-              ignoreRoads: false
-            });
-          }
+        }
+        const source = creepMemory.sourcePoint;
+        const code = source
+          ? tryDoOrMove(() => {
+              if (creepMemory.sourceRoom !== remoteMiner.room.name) return ERR_NOT_IN_RANGE;
+              if (!creepMemory.sourcePoint || !creepMemory.sourceRoom || !Game.rooms[creepMemory.sourceRoom])
+                return ERR_NOT_IN_RANGE;
+              const src = Game.rooms[creepMemory.sourceRoom].lookForAt(
+                LOOK_SOURCES,
+                creepMemory.sourcePoint.x,
+                creepMemory.sourcePoint.y
+              )[0];
+              return remoteMiner.harvest(src);
+            }, remoteMiner.travelTo(new RoomPosition(source.x, source.y, source.roomName), undefined, { ignoreCreeps: false, ignoreRoads: false, reusePath: 50 }))
+          : tryDoOrMove(
+              () => ERR_NOT_IN_RANGE,
+              remoteMiner.travelTo(
+                new RoomPosition(
+                  creepMemory.sourcePoint?.x ?? 25,
+                  creepMemory.sourcePoint?.y ?? 25,
+                  creepMemory.sourceRoom
+                ),
+                undefined,
+                {
+                  ignoreCreeps: false,
+                  ignoreRoads: false,
+                  reusePath: 50
+                }
+              )
+            );
+        if (code === ERR_NOT_ENOUGH_RESOURCES) {
+          changeState("hauling", remoteMiner);
         }
       }
       break;
@@ -115,9 +122,7 @@ export function remoteMinerBehavior(creep: Creep): void {
           creepMemory.storagePoint = storage.id;
           const transferCode = tryDoOrMove(
             () => remoteMiner.transfer(storage, RESOURCE_ENERGY),
-            remoteMiner.travelTo(storage, undefined, { ignoreCreeps: false, ignoreRoads: false }),
-            remoteMiner,
-            storage
+            remoteMiner.travelTo(storage, undefined, { ignoreCreeps: false, ignoreRoads: false })
           );
           if (transferCode === ERR_FULL) {
             changeState("hauling", remoteMiner);
@@ -125,22 +130,11 @@ export function remoteMinerBehavior(creep: Creep): void {
             changeState("mining", remoteMiner);
           }
         } else {
-          if (!creepMemory.exitPosition || creepMemory.exitPosition.room !== remoteMiner.room.name) {
-            const exit = exitsFromRoomToRoom(remoteMiner.room.name, creepMemory.originRoom, 99999);
-            if (exit != ERR_NO_PATH && exit != ERR_INVALID_ARGS) {
-              const closestExit = _.first(directionExitFromSpawn(remoteMiner.room, exit, 500));
-              if (closestExit) {
-                creepMemory.exitPosition = { x: closestExit.x, y: closestExit.y, room: remoteMiner.room.name };
-              } else log(`Remote miner ${remoteMiner.name} can't find an exit to ${creepMemory.originRoom}`);
-            } else log(`Remote miner ${remoteMiner.name} can't find a path to ${creepMemory.originRoom}`);
-          }
-          if (creepMemory.exitPosition) {
-            const exitPos = creepMemory.exitPosition;
-            remoteMiner.travelInto(new RoomPosition(exitPos.x, exitPos.y, remoteMiner.room.name), undefined, {
-              ignoreCreeps: false,
-              ignoreRoads: false
-            });
-          }
+          remoteMiner.travelInto(new RoomPosition(25, 25, creepMemory.originRoom), undefined, {
+            ignoreCreeps: false,
+            ignoreRoads: false,
+            reusePath: 50
+          });
         }
       }
       break;

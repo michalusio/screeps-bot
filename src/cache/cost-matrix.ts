@@ -15,10 +15,10 @@ const costMatrixTerrainCache = cacheForKey("cost matrix terrain", (roomNameAndMo
           matrix.set(x, y, 255);
           break;
         case TERRAIN_MASK_SWAMP:
-          matrix.set(x, y, 1 + 9 * modifier);
+          matrix.set(x, y, 5 + 5 * modifier);
           break;
         case 0:
-          matrix.set(x, y, 1 + modifier);
+          matrix.set(x, y, 2.5 * modifier);
           break;
       }
     }
@@ -39,9 +39,9 @@ export const costMatrixCache = cacheForKey(
     if (!room) return matrix;
     matrix = matrix.clone();
     if (!ignoreCreeps) {
-      creepMyAndPositions(room, 7).forEach(c => {
+      creepMyAndPositions(room, 1).forEach(c => {
         if (c.my) matrix.set(c.pos.x, c.pos.y, MY_CREEP_PATH_COST);
-        else c.pos.getAround(HOSTILE_CREEP_AVOID_ZONE_SIZE).forEach(pos => matrix.set(pos.x, pos.y, 254));
+        else c.pos.getAround(HOSTILE_CREEP_AVOID_ZONE_SIZE).forEach(pos => matrix.set(pos.x, pos.y, 255));
       });
     }
     structures(room, 31).forEach(s => {
@@ -54,7 +54,9 @@ export const costMatrixCache = cacheForKey(
         // Can't walk through non-walkable buildings
         matrix.set(s.pos.x, s.pos.y, 255);
       } else if (!ignoreContainers && s.structureType === STRUCTURE_CONTAINER) {
-        matrix.set(s.pos.x, s.pos.y, 5);
+        if (matrix.get(s.pos.x, s.pos.y) < 5) {
+          matrix.set(s.pos.x, s.pos.y, 5);
+        }
       }
     });
     constructionSites(room, 31)

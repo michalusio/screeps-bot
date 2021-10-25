@@ -73,10 +73,9 @@ export const freeEnergyContainers = (
 export const structuresToRepair = cacheForRoom("structures to repair", room =>
   room
     .find(FIND_STRUCTURES)
+    .filter(s => s.hits < s.hitsMax)
     .filter(
-      s =>
-        (s.structureType !== "constructedWall" && s.structureType !== "rampart" && s.hitsMax / 2 > s.hits) ||
-        s.hits / 100 > s.hits
+      s => (s.structureType !== "rampart" && s.structureType !== "constructedWall") || s.hits < room.memory.wallRepairs
     )
 );
 
@@ -84,12 +83,12 @@ export const structuresToRepairByTower = cacheForRoom("structures to repair by t
   _.sortBy(
     room
       .find(FIND_STRUCTURES)
+      .filter(s => s.hits < s.hitsMax)
       .filter(
         s =>
-          s.hits < s.hitsMax &&
-          (s.room.memory.wallRepairs || (s.structureType !== "constructedWall" && s.structureType !== "rampart"))
+          (s.structureType !== "rampart" && s.structureType !== "constructedWall") || s.hits < room.memory.wallRepairs
       ),
-    s => REPAIR_PRIORITY[s.structureType] * 1000 - (s.hitsMax - s.hits) / s.hitsMax
+    s => (REPAIR_PRIORITY[s.structureType] || 15) * 10 + s.hits / s.hitsMax
   )
 );
 

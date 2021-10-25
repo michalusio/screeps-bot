@@ -6,7 +6,7 @@ export interface CreepRoleMemory extends CreepMemory {
   role: string;
   newCreep?: boolean;
   state: string;
-  _travel?: RoomPosition[] & { prevPos: RoomPosition; waitTime: number };
+  _travel?: { path: RoomPosition[]; prevPos: RoomPosition; waitTime: number; target: RoomPosition };
 }
 
 export interface CreepRemoteMemory extends CreepRoleMemory {

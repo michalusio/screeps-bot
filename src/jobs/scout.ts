@@ -8,6 +8,8 @@ export interface Scout extends Creep {
 export interface ScoutMemory extends CreepRemoteMemory {
   role: "scout";
 
+  notifyDisabled: boolean;
+
   exitPosition: { x: number; y: number; room: string } | null;
   lastDirection: FIND_EXIT_TOP | FIND_EXIT_BOTTOM | FIND_EXIT_RIGHT | FIND_EXIT_LEFT;
 
@@ -19,6 +21,7 @@ export const scoutBody = (): BodyPartConstant[] => [MOVE];
 export const scoutMemory: ScoutMemory = {
   newCreep: true,
   role: "scout",
+  notifyDisabled: false,
   originRoom: "",
   state: "scouting",
   exitPosition: null,
@@ -32,6 +35,10 @@ function randomExit(): FIND_EXIT_TOP | FIND_EXIT_BOTTOM | FIND_EXIT_RIGHT | FIND
 export function scoutBehavior(creep: Creep): void {
   const scout = creep as Scout;
   const creepMemory = scout.memory;
+  if (!creepMemory.notifyDisabled) {
+    scout.notifyWhenAttacked(false);
+    creepMemory.notifyDisabled = true;
+  }
   switch (creepMemory.state) {
     case "scouting":
       {

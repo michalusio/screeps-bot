@@ -97,29 +97,19 @@ export function attackerBehavior(creep: Creep): void {
         ];
         const toAttack = minBy(stuff, s => s.pos.getRangeTo(attacker));
         if (toAttack) {
-          tryDoOrMove(
-            () => {
-              const result = attacker.attack(toAttack);
-              if (result === OK) attacking = true;
-              return result;
-            },
-            attacker.travelTo(toAttack, undefined, { ignoreCreeps: true, ignoreRoads: false }),
-            attacker,
-            toAttack
-          );
+          tryDoOrMove(() => {
+            const result = attacker.attack(toAttack);
+            if (result === OK) attacking = true;
+            return result;
+          }, attacker.travelTo(toAttack, undefined, { ignoreCreeps: true, ignoreRoads: false }));
         } else {
           const anyEnemyCreep = attacker.pos.findClosestByRange(FIND_HOSTILE_CREEPS);
           if (anyEnemyCreep) {
-            tryDoOrMove(
-              () => {
-                const result = attacker.attack(anyEnemyCreep);
-                if (result === OK) attacking = true;
-                return result;
-              },
-              attacker.travelTo(anyEnemyCreep, undefined, { ignoreCreeps: true, ignoreRoads: false }),
-              attacker,
-              anyEnemyCreep
-            );
+            tryDoOrMove(() => {
+              const result = attacker.attack(anyEnemyCreep);
+              if (result === OK) attacking = true;
+              return result;
+            }, attacker.travelTo(anyEnemyCreep, undefined, { ignoreCreeps: true, ignoreRoads: false }));
           } else changeStage("a-move", attacker);
         }
       }

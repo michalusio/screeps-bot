@@ -57,12 +57,7 @@ export function conquistadoresBehavior(creep: Creep): void {
         if (conquistadores.store.getUsedCapacity() === 0) {
           const rest = conquistadores.room.find(FIND_DROPPED_RESOURCES).filter(r => r.resourceType === RESOURCE_ENERGY);
           if (rest.length > 0) {
-            tryDoOrMove(
-              () => conquistadores.pickup(rest[0]),
-              conquistadores.travelTo(rest[0]),
-              conquistadores,
-              rest[0]
-            );
+            tryDoOrMove(() => conquistadores.pickup(rest[0]), conquistadores.travelTo(rest[0]));
           } else {
             const restRuins = conquistadores.room
               .find(FIND_RUINS)
@@ -70,9 +65,7 @@ export function conquistadoresBehavior(creep: Creep): void {
             if (restRuins.length > 0) {
               tryDoOrMove(
                 () => conquistadores.withdraw(restRuins[0], RESOURCE_ENERGY),
-                conquistadores.travelTo(restRuins[0]),
-                conquistadores,
-                restRuins[0]
+                conquistadores.travelTo(restRuins[0])
               );
             } else {
               changeState("mining", conquistadores);
@@ -90,7 +83,7 @@ export function conquistadoresBehavior(creep: Creep): void {
             creepMemory.targetRoom = "";
             break;
           }
-          tryDoOrMove(() => conquistadores.build(site), conquistadores.travelTo(site), conquistadores, site);
+          tryDoOrMove(() => conquistadores.build(site), conquistadores.travelTo(site));
         } else {
           if (!creepMemory.exitPosition || creepMemory.exitPosition.room !== conquistadores.room.name) {
             const exit = conquistadores.room.findExitTo(creepMemory.targetRoom);
@@ -115,12 +108,7 @@ export function conquistadoresBehavior(creep: Creep): void {
         if (
           source &&
           (conquistadores.store.getFreeCapacity() === 0 ||
-            tryDoOrMove(
-              () => conquistadores.harvest(source),
-              conquistadores.travelTo(source),
-              conquistadores,
-              source
-            ) === ERR_FULL)
+            tryDoOrMove(() => conquistadores.harvest(source), conquistadores.travelTo(source)) === ERR_FULL)
         ) {
           changeState("conquering", conquistadores);
         }
@@ -139,12 +127,8 @@ export function conquistadoresBehavior(creep: Creep): void {
           creepMemory.sourcePoint = storage.id;
           if (
             conquistadores.store.getFreeCapacity() === 0 ||
-            tryDoOrMove(
-              () => conquistadores.withdraw(storage, RESOURCE_ENERGY),
-              conquistadores.travelTo(storage),
-              conquistadores,
-              storage
-            ) === ERR_FULL
+            tryDoOrMove(() => conquistadores.withdraw(storage, RESOURCE_ENERGY), conquistadores.travelTo(storage)) ===
+              ERR_FULL
           ) {
             changeState("conquering", conquistadores);
           } else if (conquistadores.store.getUsedCapacity(RESOURCE_ENERGY) <= 1) {

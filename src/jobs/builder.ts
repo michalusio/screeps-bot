@@ -34,7 +34,11 @@ export function builderBehavior(creep: Creep): void {
   const builder = creep as Builder;
   const creepMemory = builder.memory;
 
-  if (constructionSites(builder.room, 10).length === 0 && Math.random() < 0.1) {
+  if (
+    constructionSites(builder.room, 10).length === 0 &&
+    structuresToRepair(builder.room, 2).length === 0 &&
+    Math.random() < 0.01
+  ) {
     beginSacrifice(builder);
     return;
   }
@@ -61,7 +65,10 @@ export function builderBehavior(creep: Creep): void {
           break;
         }
         creepMemory.sourcePoint = source.id;
-        tryDoOrMove(() => builder.withdraw(source, RESOURCE_ENERGY), builder.travelTo(source), builder, source);
+        tryDoOrMove(
+          () => builder.withdraw(source, RESOURCE_ENERGY),
+          builder.travelTo(source, undefined, { range: 1, ignoreContainers: false, ignoreCreeps: false })
+        );
         changeStateIfFull(builder, creepMemory);
       }
       break;
@@ -70,7 +77,7 @@ export function builderBehavior(creep: Creep): void {
       {
         const site = getByIdOrNew(creepMemory.buildPoint, () =>
           minBy(
-            constructionSites(builder.room, 50),
+            constructionSites(builder.room, 10),
             s => s.progressTotal - s.progress + s.pos.getRangeTo(builder) * 100
           )
         );
@@ -84,12 +91,15 @@ export function builderBehavior(creep: Creep): void {
           if (energySpot.length > 0 && energySpot[0].amount > 50) {
             tryDoOrMove(
               () => builder.pickup(energySpot[0]),
-              builder.travelTo(site, undefined, { range: 1 }),
-              builder,
-              site
+              builder.travelTo(site, undefined, { range: 1, ignoreContainers: false, ignoreCreeps: false })
             );
           } else changeState("sourcing", builder);
-        } else tryDoOrMove(() => builder.build(site), builder.travelTo(site, undefined, { range: 3 }), builder, site);
+        } else {
+          tryDoOrMove(
+            () => builder.build(site),
+            builder.travelTo(site, undefined, { range: 1, ignoreContainers: false, ignoreCreeps: false })
+          );
+        }
       }
       break;
 
@@ -101,7 +111,7 @@ export function builderBehavior(creep: Creep): void {
           break;
         }
         creepMemory.repairPoint = site.id;
-        tryDoOrMove(() => builder.repair(site), builder.travelTo(site, undefined, { range: 3 }), builder, site);
+        tryDoOrMove(() => builder.repair(site), builder.travelTo(site, undefined, { range: 1 }));
         if (builder.store.getUsedCapacity(RESOURCE_ENERGY) <= 0) {
           changeState("sourcing", builder);
         }

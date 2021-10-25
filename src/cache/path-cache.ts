@@ -2,7 +2,7 @@ import { cacheForKey, cacheForRoom, cacheForRoomStructKey, cacheForStruct, RoomC
 import { costMatrixCache } from "./cost-matrix";
 import { mySpawns } from "./structure-cache";
 
-type PathKey = `${number} ${number}|${number} ${number}|${string}${boolean}${boolean}${number}`;
+type PathKey = `${number} ${number} ${string}|${number} ${number} ${string}|${boolean}${boolean}${number}`;
 
 interface PathData {
   aPos: RoomPosition;
@@ -19,7 +19,7 @@ interface PathDataWithKey extends PathData {
 }
 
 const key = (x: PathData): PathKey =>
-  `${x.aPos.x} ${x.aPos.y}|${x.bPos.x} ${x.bPos.y}|${x.aPos.roomName}${x.ignoreRoads}${x.ignoreCreeps}${x.moveModifier}`;
+  `${x.aPos.x} ${x.aPos.y} ${x.aPos.roomName}|${x.bPos.x} ${x.bPos.y} ${x.bPos.roomName}|${x.ignoreRoads}${x.ignoreCreeps}${x.moveModifier}`;
 
 const pathsCache = cacheForStruct<PathDataWithKey, RoomPosition[]>(
   "path cache",
@@ -28,14 +28,11 @@ const pathsCache = cacheForStruct<PathDataWithKey, RoomPosition[]>(
       struct.aPos,
       { pos: struct.bPos, range: struct.range },
       {
-        maxRooms: 1,
         roomCallback: roomName =>
           costMatrixCache(
             `${roomName}|${struct.ignoreRoads}|${struct.ignoreCreeps}|${struct.ignoreContainers}|${struct.moveModifier}`,
             7
-          ),
-        maxOps: 1000,
-        heuristicWeight: 1.25
+          )
       }
     );
     const path = pathResult.incomplete ? [] : pathResult.path;
@@ -65,16 +62,21 @@ export function getPathFromCache(
     ignoreRoads: options.ignoreRoads === undefined ? false : options.ignoreRoads,
     ignoreCreeps: options.ignoreCreeps === undefined ? true : options.ignoreCreeps,
     ignoreContainers: options.ignoreContainers === undefined ? false : options.ignoreContainers,
-    moveModifier: options.moveModifier === undefined ? 1 : options.moveModifier,
+    moveModifier: options.moveModifier === undefined ? 1 : Math.ceil(options.moveModifier * 2) / 2,
     range: options.range === undefined ? 1 : options.range
   };
   const path = pathsCache({ ...data, key: key(data) }, 7);
   if (options.visualizePathStyle) {
-    new RoomVisual(aPos.roomName).poly([aPos, ...path], {
-      lineStyle: "dashed",
-      strokeWidth: 0.2,
-      ...options.visualizePathStyle
-    });
+    _.forEach(
+      _.groupBy(path, p => p.roomName),
+      (paths, roomName) => {
+        new RoomVisual(roomName).poly(paths, {
+          lineStyle: "dashed",
+          strokeWidth: 0.2,
+          ...options.visualizePathStyle
+        });
+      }
+    );
   }
   return path;
 }
