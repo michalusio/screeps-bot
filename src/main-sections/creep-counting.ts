@@ -45,7 +45,7 @@ export function wrapWithCount(loop: (creepCount: CreepCounter) => void): () => v
       roomCount.overall++;
       if (
         memory.role &&
-        ((creep.ticksToLive ?? 600) > CREEP_SPAWN_TIME * creep.body.length + 12 || memory.role === "claimer")
+        ((creep.ticksToLive ?? 600) > CREEP_SPAWN_TIME * creep.body.length + 24 || memory.role === "claimer")
       ) {
         roomCount.perRole[memory.role] = (roomCount.perRole[memory.role] ?? 0) + 1;
       }

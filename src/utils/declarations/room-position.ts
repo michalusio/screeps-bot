@@ -5,6 +5,7 @@ declare global {
     getFreeSpaceAround(): number;
     getEmptyAround(): RoomPosition[];
     getAround(range: number): RoomPosition[];
+    lookForAround<T extends keyof AllLookAtTypes>(type: T): LookForAtAreaResultArray<AllLookAtTypes[T], T> | undefined;
     getDirected(dir: DirectionConstant): RoomPosition;
     isBorderCell(): boolean;
     canBuild(): boolean;
@@ -95,6 +96,20 @@ export function injectRoomPositionMethods(): void {
       }
     }
     return positions;
+  };
+
+  RoomPosition.prototype.lookForAround = function <T extends keyof AllLookAtTypes>(
+    type: T
+  ): LookForAtAreaResultArray<AllLookAtTypes[T], T> | undefined {
+    if (!Game.rooms[this.roomName]) return undefined;
+    return Game.rooms[this.roomName].lookForAtArea(
+      type,
+      Math.max(0, this.y - 1),
+      Math.max(0, this.x - 1),
+      Math.min(49, this.y + 1),
+      Math.min(49, this.x + 1),
+      true
+    );
   };
 
   RoomPosition.prototype.getDirected = function (dir: DirectionConstant): RoomPosition {

@@ -31,6 +31,7 @@ export function creepActions(): { [role: string]: [number, number] } {
   for (const roleBundle of creepsGroupedByRole) {
     const cpu = Game.cpu.getUsed();
     roleBundle.forEach(([creep, memory]) => {
+      const currentState = memory.state;
       try {
         roleUtilities[memory.role][2](creep);
       } catch (e) {
@@ -38,6 +39,16 @@ export function creepActions(): { [role: string]: [number, number] } {
           console.log(e.stack);
           console.log(e.message);
         } else console.log(e);
+      }
+      if (currentState !== memory.state) {
+        try {
+          roleUtilities[memory.role][2](creep);
+        } catch (e) {
+          if (e instanceof Error) {
+            console.log(e.stack);
+            console.log(e.message);
+          } else console.log(e);
+        }
       }
     });
     roleTime[roleBundle[0][1].role] = [roleBundle.length, Game.cpu.getUsed() - cpu];

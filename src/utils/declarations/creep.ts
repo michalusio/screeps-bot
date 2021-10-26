@@ -1,4 +1,5 @@
 import { exits, getPathFromCache } from "cache/path-cache";
+import { CREEP_PATH_CACHE } from "configs";
 import { CreepRoleMemory, MoveToReturnCode } from "utils/creeps";
 
 declare global {
@@ -53,7 +54,7 @@ export function injectCreepMethods(): void {
             range: 1,
             visualizePathStyle: { stroke: "#" + hash.toString(16) },
             ...(options ?? {})
-          }).slice(0, options?.reusePath === undefined ? 8 : options?.reusePath),
+          }).slice(0, options?.reusePath === undefined ? CREEP_PATH_CACHE : options?.reusePath),
           prevPos: this.pos,
           waitTime: 0,
           target: targeted
@@ -94,7 +95,7 @@ export function injectCreepMethods(): void {
           this.roleMemory._travel.waitTime++;
           if (this.roleMemory._travel.waitTime > 5) {
             this.roleMemory._travel = undefined;
-            console.log(`${this.name} is has enough of this pathing`);
+            console.log(`${this.name} has enough of this pathing`);
           }
         } else {
           this.roleMemory._travel.waitTime = 0;
@@ -125,7 +126,7 @@ export function injectCreepMethods(): void {
           range: 0,
           visualizePathStyle: { stroke: "#" + hash.toString(16) },
           ...(options ?? {})
-        }).slice(0, options?.reusePath == null ? 8 : options?.reusePath),
+        }).slice(0, options?.reusePath == null ? CREEP_PATH_CACHE : options?.reusePath),
         prevPos: this.pos,
         waitTime: 0,
         target: targeted
@@ -166,7 +167,7 @@ export function injectCreepMethods(): void {
         this.roleMemory._travel.waitTime++;
         if (this.roleMemory._travel.waitTime > 5) {
           this.roleMemory._travel = undefined;
-          console.log(`${this.name} is has enough of this pathing`);
+          console.log(`${this.name} has enough of this pathing`);
         }
       } else {
         this.roleMemory._travel.waitTime = 0;

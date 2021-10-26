@@ -64,11 +64,11 @@ export function builderBehavior(creep: Creep): void {
           changeState("sourcing", builder);
           break;
         }
-        creepMemory.sourcePoint = source.id;
         tryDoOrMove(
           () => builder.withdraw(source, RESOURCE_ENERGY),
           builder.travelTo(source, undefined, { range: 1, ignoreContainers: false, ignoreCreeps: false })
         );
+        creepMemory.sourcePoint = source.id;
         changeStateIfFull(builder, creepMemory);
       }
       break;
@@ -86,20 +86,17 @@ export function builderBehavior(creep: Creep): void {
           break;
         }
         creepMemory.buildPoint = site.id;
-        if (builder.store.getUsedCapacity(RESOURCE_ENERGY) <= 0) {
-          const energySpot = site.pos.lookFor(LOOK_ENERGY);
-          if (energySpot.length > 0 && energySpot[0].amount > 50) {
-            tryDoOrMove(
-              () => builder.pickup(energySpot[0]),
-              builder.travelTo(site, undefined, { range: 1, ignoreContainers: false, ignoreCreeps: false })
-            );
-          } else changeState("sourcing", builder);
-        } else {
-          tryDoOrMove(
-            () => builder.build(site),
-            builder.travelTo(site, undefined, { range: 1, ignoreContainers: false, ignoreCreeps: false })
-          );
+        const energySpot = site.pos.lookForAround(LOOK_ENERGY);
+        if (energySpot && energySpot.length > 0 && energySpot[0].energy.amount > 50) {
+          builder.pickup(energySpot[0].energy);
+        } else if (builder.store.getUsedCapacity(RESOURCE_ENERGY) <= 0) {
+          changeState("sourcing", builder);
+          return;
         }
+        tryDoOrMove(() => {
+          if (!builder.pos.isNearTo(site)) return ERR_NOT_IN_RANGE;
+          return builder.build(site);
+        }, builder.travelTo(site, undefined, { range: 1, ignoreContainers: false, ignoreCreeps: false }));
       }
       break;
 

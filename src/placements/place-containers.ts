@@ -68,10 +68,18 @@ function placeSourceContainersFunc(room: Room): void {
   );
   const spawns = mySpawns(room);
   sourcesList.forEach(s => {
+    const hasContainer =
+      (s.pos.lookForAround(LOOK_STRUCTURES) ?? []).some(s => s.structure.structureType === STRUCTURE_CONTAINER) ||
+      (s.pos.lookForAround(LOOK_CONSTRUCTION_SITES) ?? []).some(
+        s => s.constructionSite.structureType === STRUCTURE_CONTAINER
+      );
+    if (hasContainer) return;
     const containerPlace = minBy(s.pos.getEmptyAround(), pos => _.sum(spawns, spawn => pos.getRangeTo(spawn)));
     if (
       containerPlace &&
-      containerPlace.lookFor(LOOK_STRUCTURES).filter(s => s.structureType === STRUCTURE_CONTAINER).length === 0
+      containerPlace
+        .lookFor(LOOK_STRUCTURES)
+        .filter(s => s.structureType !== STRUCTURE_RAMPART && s.structureType !== STRUCTURE_ROAD).length === 0
     ) {
       containerPlace.createConstructionSite(STRUCTURE_CONTAINER);
     }

@@ -43,16 +43,19 @@ export const Bootstrap: RoomMode = {
     const fullRCL = (room.controller?.level ?? -1) === 8;
     const RCL3 = (room.controller?.level ?? -1) <= 3;
     return [
-      { roles: { miner: 1, hauler: 1 } },
-      { roles: { miner: 2, hauler: 2, upgrader: 1 } },
       { roles: { defender: anyEnemies } },
-      { roles: { upgrader: fullRCL ? 1 : 2, builder: builderMod }, structures: [rcl(2), extensionPlacer(5)] },
-      { roles: { builder: 3 * builderMod, remoteminer: 1 }, structures: [roadsToSources, placeSourceContainers] },
+      { roles: { miner: 1, hauler: 1 } },
+      { roles: { miner: 2, hauler: 2 + energyLayingAroundMod, upgrader: 1 }, structures: [rcl(2)] },
       {
-        roles: { towerbro: 1, upgrader: fullRCL ? 1 : RCL3 ? 5 : 3, hauler: 2 + energyLayingAroundMod, remoteminer: 2 },
+        roles: { builder: 2 * builderMod },
+        structures: [placeSourceContainers, extensionPlacer(5)]
+      },
+      { roles: { upgrader: fullRCL ? 1 : 2, remoteminer: 2 }, structures: [roadsToSources] },
+      {
+        roles: { towerbro: 1, upgrader: fullRCL ? 1 : RCL3 ? 5 : 3, remoteminer: 3 },
         structures: [roadsToController, placeControllerContainers, rcl(3), extensionPlacer(10)]
       },
-      { roles: { hauler: 2 + energyLayingAroundMod }, structures: [placeTower(1)] },
+      { roles: {}, structures: [placeTower(1)] },
       { roles: {}, structures: [roadsBetweenSources] },
       { roles: { remoteminer: 4 }, structures: [roadsToExits, rcl(4), extensionPlacer(20)] },
       {

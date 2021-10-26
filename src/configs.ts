@@ -80,6 +80,7 @@ export const STORAGE_QUOTAS = {
 };
 
 export const ENERGY_NOT_EMPTY_MARK = 200;
+export const ENERGY_NOT_EMPTY_SPAWN_MARK = 100;
 
 export const BODYPART_PRIORITY: { [key: string]: number } = {
   [TOUGH]: 0,
@@ -96,6 +97,7 @@ export const PLACEMENT_CACHE_TIME = 10;
 export const USABLE_SPAWN_AREA = 2;
 export const NEW_COLONY_SPAWN_SIZE = 6;
 
+export const CREEP_PATH_CACHE = 16;
 export const MY_CREEP_PATH_COST = 255;
 export const HOSTILE_CREEP_AVOID_ZONE_SIZE = 2;
 

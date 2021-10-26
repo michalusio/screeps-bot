@@ -21,7 +21,7 @@ export const defenderBody = (energyAvailable: number): BodyPartConstant[] => {
   let times = 0;
   while (energy >= 230 && times < 6) {
     times++;
-    energy -= 230;
+    energy -= BODYPART_COST[TOUGH] * 5 + BODYPART_COST[ATTACK] + BODYPART_COST[MOVE] * 2;
   }
   if (times === 0) return [];
   for (let i = 0; i < times; i++) {
