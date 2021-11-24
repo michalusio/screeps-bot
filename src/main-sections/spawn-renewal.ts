@@ -7,6 +7,7 @@ export function renewIfNotBusy(): void {
       Memory.rooms[spawn.room.name] = {
         civilizationLevel: 0,
         children: [],
+        remotes: [],
         mode: "Bootstrap",
         orders: {},
         prioritizeBuilding: true,

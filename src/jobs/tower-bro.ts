@@ -46,7 +46,7 @@ export function towerbroBehavior(creep: Creep): void {
           creepMemory.pickupPoint = pickup.id;
           tryDoOrMove(() => towerbro.pickup(pickup), towerbro.travelTo(pickup));
         } else {
-          const resource = getByIdOrNew(creepMemory.storagePoint, energyContainerNotEmpty(towerbro));
+          const resource = getByIdOrNew(creepMemory.storagePoint, energyContainerNotEmpty(towerbro.room, towerbro));
           if (!resource || resource.store.getUsedCapacity(RESOURCE_ENERGY) === 0) {
             changeState("getting", towerbro);
             if (Game.time % 3 === 0) towerbro.wander();
@@ -66,7 +66,10 @@ export function towerbroBehavior(creep: Creep): void {
         const placeToManage = getByIdOrNew(creepMemory.managePoint, () =>
           minBy(
             towersSpawnContainers(towerbro.room, 5),
-            t => t.store.getUsedCapacity(RESOURCE_ENERGY) + FILL_PRIORITY[t.structureType] * 100
+            t =>
+              t.store.getUsedCapacity(RESOURCE_ENERGY) +
+              FILL_PRIORITY[t.structureType] * 10000 +
+              t.pos.getRangeTo(towerbro) * 10
           )
         );
         if (!placeToManage || placeToManage.store.getFreeCapacity(RESOURCE_ENERGY) === 0) {

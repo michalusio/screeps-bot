@@ -2,6 +2,7 @@ import { cacheForKey, cacheForRoom, cacheForRoomStructKey, cacheForStruct, RoomC
 import { costMatrixCache } from "./cost-matrix";
 import { mySpawns } from "./structure-cache";
 
+export type ExtendedMoveToOpts = MoveToOpts & { moveModifier?: number; ignoreContainers?: boolean };
 type PathKey = `${number} ${number} ${string}|${number} ${number} ${string}|${boolean}${boolean}${number}`;
 
 interface PathData {
@@ -44,7 +45,7 @@ const pathsCache = cacheForStruct<PathDataWithKey, RoomPosition[]>(
 export function getPathFromCache(
   a: RoomPosition | _HasRoomPosition,
   b: RoomPosition | _HasRoomPosition,
-  options: MoveToOpts & { moveModifier?: number; ignoreContainers?: boolean } = {
+  options: ExtendedMoveToOpts = {
     ignoreRoads: false,
     ignoreCreeps: true,
     ignoreContainers: false,
@@ -66,7 +67,7 @@ export function getPathFromCache(
     range: options.range === undefined ? 1 : options.range
   };
   const path = pathsCache({ ...data, key: key(data) }, 7);
-  if (options.visualizePathStyle) {
+  if (options.visualizePathStyle && Memory.visuals) {
     _.forEach(
       _.groupBy(path, p => p.roomName),
       (paths, roomName) => {

@@ -1,11 +1,12 @@
 import { structuresNotPlaced } from "cache/stage-cache";
-import { mySpawns } from "cache/structure-cache";
+import { anyConstructionSitesIncludingRemotes, mySpawns } from "cache/structure-cache";
 import { CIVILIZATION_MINIMUM_SPAWN_ENERGY, CIVILIZATION_STAGE_MODIFIER, PLACEMENT_CACHE_TIME } from "configs";
 import { defenderBody, defenderMemory } from "jobs/defender";
 import { minerBody, minerMemory } from "jobs/miner";
 import { roleUtilities } from "jobs/role-utilities";
 import { Placement } from "placements/placement";
 import { Bootstrap, modes, RoleRequirements, Stage } from "utils/modes";
+import { getRoomsAround, isRoomRemoteSafe } from "utils/room-utils";
 
 import { log } from "../utils/log";
 import { CreepCounter, RoomCreepCounter } from "./creep-counting";
@@ -47,9 +48,13 @@ export function wrapWithStages(loop: (creepCount: CreepCounter) => void): (creep
       if (!room.memory.children) {
         room.memory.children = [];
       }
+      if (!room.memory.remotes) {
+        room.memory.remotes = [];
+      }
       if (!room.memory.orders) {
         room.memory.orders = {};
       }
+
       if (performSpawnOrders(room)) return;
 
       //
@@ -79,7 +84,7 @@ export function wrapWithStages(loop: (creepCount: CreepCounter) => void): (creep
       }
 
       const [nextRequirements, placementsToPlace] = getNextStageDelta(stageIndex, room, stages, roomCounter);
-      if (placementsToPlace.length > 0 && room.find(FIND_MY_CONSTRUCTION_SITES).length === 0) {
+      if (placementsToPlace.length > 0 && !anyConstructionSitesIncludingRemotes(room)) {
         placementsToPlace[0].place(room);
       }
 

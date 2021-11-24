@@ -13,25 +13,25 @@ export const ROLE_CPU_PRIORITY: { [role: string]: number } = {
 };
 
 export const REPAIR_PRIORITY = {
-  spawn: 0,
-  extension: 10,
-  road: 15,
-  container: 15,
-  tower: 20,
+  [STRUCTURE_SPAWN]: 0,
+  [STRUCTURE_EXTENSION]: 10,
+  [STRUCTURE_ROAD]: 15,
+  [STRUCTURE_CONTAINER]: 15,
+  [STRUCTURE_TOWER]: 20,
 
-  storage: 25,
-  link: 25,
+  [STRUCTURE_STORAGE]: 25,
+  [STRUCTURE_LINK]: 25,
 
-  rampart: 30,
-  constructedWall: 30,
+  [STRUCTURE_RAMPART]: 30,
+  [STRUCTURE_WALL]: 30,
 
-  observer: 50,
-  powerSpawn: 50,
-  extractor: 50,
-  lab: 50,
-  terminal: 50,
-  nuker: 50,
-  factory: 50,
+  [STRUCTURE_OBSERVER]: 50,
+  [STRUCTURE_POWER_SPAWN]: 50,
+  [STRUCTURE_EXTRACTOR]: 50,
+  [STRUCTURE_LAB]: 50,
+  [STRUCTURE_TERMINAL]: 50,
+  [STRUCTURE_NUKER]: 50,
+  [STRUCTURE_FACTORY]: 50,
 
   invaderCore: 999,
   keeperLair: 999,
@@ -54,25 +54,25 @@ export const CIVILIZATION_MINIMUM_SPAWN_ENERGY = 150;
 export const CIVILIZATION_STAGE_MODIFIER = 50;
 
 export const HAUL_PRIORITY = {
-  droppedEnergy: 0,
-  tombstone: 1,
-  container: 2
+  [LOOK_ENERGY]: 0,
+  [LOOK_TOMBSTONES]: 1,
+  [STRUCTURE_CONTAINER]: 2
 };
 
 export const FILL_PRIORITY = {
-  tower: 0,
-  spawn: 1,
-  extension: 2,
-  terminal: 3,
-  storage: 4,
-  container: 5
+  [STRUCTURE_TOWER]: 0,
+  [STRUCTURE_SPAWN]: 1,
+  [STRUCTURE_EXTENSION]: 2,
+  [STRUCTURE_TERMINAL]: 3,
+  [STRUCTURE_STORAGE]: 4,
+  [STRUCTURE_CONTAINER]: 5
 };
 
 export const EMPTY_PRIORITY = {
-  spawn: 4,
-  extension: 3,
-  storage: 2,
-  container: 2
+  [STRUCTURE_SPAWN]: 4,
+  [STRUCTURE_EXTENSION]: 3,
+  [STRUCTURE_STORAGE]: 2,
+  [STRUCTURE_CONTAINER]: 2
 };
 
 export const STORAGE_QUOTAS = {

@@ -100,6 +100,15 @@ export const constructionSites = (room: Room, time: number): ConstructionSite[] 
     .map(id => Game.getObjectById(id))
     .filter(s => s != null) as ConstructionSite[];
 
+export const anyConstructionSitesIncludingRemotes = (room: Room): boolean => {
+  return (
+    constructionSites(room, 5).length > 0 ||
+    Memory.rooms[room.name].remotes.some(
+      remote => Game.rooms[remote] && constructionSites(Game.rooms[remote], 5).length > 0
+    )
+  );
+};
+
 const hostileSpawnsCache = cacheForRoom("hostile spawns", room => room.find(FIND_HOSTILE_SPAWNS).map(s => s.id));
 export const hostileSpawns = (room: Room, time: number): StructureSpawn[] =>
   hostileSpawnsCache(room, time)

@@ -1,7 +1,9 @@
 import { costMatrixCache } from "cache/cost-matrix";
+import { segments } from "cache/segment-cache";
 import { getAllure } from "jobs/claimer";
 import { Attacker } from "jobs/offence/attacker";
 import { RemoteMiner } from "jobs/remote-miner";
+import { ScoutData } from "utils/declarations";
 import { messages, pruneLogs } from "../utils/log";
 import { CreepCounter } from "./creep-counting";
 import { civilizationEnergyLevel } from "./stages";
@@ -9,7 +11,7 @@ import { civilizationEnergyLevel } from "./stages";
 export function logging(creepCount: CreepCounter): void {
   pruneLogs();
 
-  showScoutVisuals();
+  //showScoutVisuals();
   showAttackVisuals();
   showRemoteVisuals();
   showSpawnVisuals();
@@ -20,7 +22,7 @@ export function logging(creepCount: CreepCounter): void {
   creepCount.forEach(roomCounter => (roles = _.union(roles, _.keys(roomCounter.perRole))));
   roles.sort();
 
-  creepCount.forEach((_, roomName) => {
+  creepCount.forEach((__, roomName) => {
     const room = Game.rooms[roomName];
     if (!room || !room.memory) return;
     const visual = room.visual;
@@ -48,12 +50,17 @@ export function logging(creepCount: CreepCounter): void {
       );
     });
 
-    new Renderer(visual, "right").table(tb => {
-      tb.addHeader(["Message".padEnd(56, " "), "Count"]);
-      messages.forEach(msg =>
-        tb.addRow([`${msg.message}`, [msg.repeats.toString(), { color: msg.repeats > 5 ? "red" : undefined }]])
-      );
-    });
+    new Renderer(visual, "right")
+      .table(tb => {
+        tb.addHeader(["Message".padEnd(56, " "), "Count"]);
+        messages.forEach(msg =>
+          tb.addRow([`${msg.message}`, [msg.repeats.toString(), { color: msg.repeats > 5 ? "red" : undefined }]])
+        );
+      })
+      .table(tb => {
+        tb.addHeader(["Segment".padEnd(14, " "), "Fullness".padEnd(14, " ")]);
+        _.forEach(segments, (seg, key) => tb.addRow([key ?? "none", (seg.fullness() / 102400).toFixed(2)]));
+      });
   });
 }
 
@@ -274,41 +281,36 @@ export class ChartBuilder {
 }
 
 function showScoutVisuals() {
+  const scoutData = segments.scoutData.get();
   const sortedByDistance = _.sortBy(
     _.filter(
-      Memory.scoutData,
+      scoutData,
       s =>
-        s.controllerLvl === 0 &&
-        Object.keys(s.enemyStructures).length === 0 &&
-        s.sourcesControllerAverageDistance < 99 &&
-        s.sources === 2
-    ),
-    s => s.sourcesControllerAverageDistance
+        s && s.ctrlLvl === 0 && Object.keys(s.enemyStructures).length === 0 && s.srcCtrlAvgDst < 99 && s.sources === 2
+    ) as ScoutData[],
+    s => s.srcCtrlAvgDst
   );
   if (sortedByDistance.length === 0) return;
-  const [min, max] = [
-    _.first(sortedByDistance).sourcesControllerAverageDistance,
-    _.last(sortedByDistance).sourcesControllerAverageDistance
-  ];
-  Object.keys(Memory.scoutData).forEach(roomName => {
-    const data = Memory.scoutData[roomName];
+  const [min, max] = [_.first(sortedByDistance).srcCtrlAvgDst, _.last(sortedByDistance).srcCtrlAvgDst];
+  Object.keys(scoutData).forEach(roomName => {
+    const data = scoutData[roomName] as ScoutData;
     Game.map.visual.rect(new RoomPosition(0, 0, roomName), 50, 50, {
       fill: Object.keys(data.enemyStructures).length > 0 ? "#ff5555" : "#55ff55",
       opacity: Math.max(0, 0.5 - (Game.time - data.tick) / 5000)
     });
     if (
       max !== min &&
-      data.controllerLvl === 0 &&
+      data.ctrlLvl === 0 &&
       Object.keys(data.enemyStructures).length === 0 &&
-      data.sourcesControllerAverageDistance < 99
+      data.srcCtrlAvgDst < 99
     ) {
-      const averageDistance = (max - data.sourcesControllerAverageDistance) / (max - min);
+      const averageDistance = (max - data.srcCtrlAvgDst) / (max - min);
       const distHeight = Math.round(20 * averageDistance + 1);
       Game.map.visual.rect(new RoomPosition(46, Math.min(49, 50 - distHeight), roomName), 4, distHeight, {
         fill: "#00ff00",
         opacity: 1
       });
-      const allure = getAllure(averageDistance, data);
+      const allure = getAllure(averageDistance, { data, key: roomName });
       const allureHeight = Math.round(20 * Math.min(1, Math.max(0, allure)) + 1);
       Game.map.visual.rect(new RoomPosition(42, 50 - allureHeight, roomName), 4, allureHeight, {
         fill: "#ffffff",

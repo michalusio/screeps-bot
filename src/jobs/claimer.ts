@@ -1,4 +1,5 @@
 import { getPathFromCache } from "cache/path-cache";
+import { segments } from "cache/segment-cache";
 import { sourcesAndMineral } from "cache/source-cache";
 import { NEW_COLONY_SPAWN_SIZE } from "configs";
 import { CreepRemoteMemory, tryDoOrMove } from "utils/creeps";
@@ -78,37 +79,35 @@ export function claimerBehavior(creep: Creep): void {
   }
 }
 function getRoomToClaim(originRoom: string): string {
+  const scoutData = segments.scoutData.get();
   const sortedByDistance = _.sortBy(
     _.filter(
-      Memory.scoutData,
+      scoutData,
       s =>
-        s.controllerLvl === 0 &&
-        Object.keys(s.enemyStructures).length === 0 &&
-        s.sourcesControllerAverageDistance < 99 &&
-        s.sources === 2
-    ),
-    s => s.sourcesControllerAverageDistance
+        s && s.ctrlLvl === 0 && Object.keys(s.enemyStructures).length === 0 && s.srcCtrlAvgDst < 99 && s.sources === 2
+    ) as ScoutData[],
+    s => s.srcCtrlAvgDst
   );
-  const [min, max] = [
-    _.first(sortedByDistance).sourcesControllerAverageDistance,
-    _.last(sortedByDistance).sourcesControllerAverageDistance
-  ];
+  const [min, max] = [_.first(sortedByDistance).srcCtrlAvgDst, _.last(sortedByDistance).srcCtrlAvgDst];
+  const converted = Object.keys(scoutData).map(
+    key => ({ data: scoutData[key], key } as { data: ScoutData; key: string })
+  );
   const room = _.first(
     _.sortBy(
       _.map(
         _.filter(
-          Memory.scoutData,
-          s =>
+          converted,
+          data =>
+            data &&
             max !== min &&
-            s.controllerLvl === 0 &&
-            Object.keys(s.enemyStructures).length === 0 &&
-            s.sourcesControllerAverageDistance < 99
-        ),
+            data.data.ctrlLvl === 0 &&
+            Object.keys(data.data.enemyStructures).length === 0 &&
+            data.data.srcCtrlAvgDst < 99
+        ) as { data: ScoutData; key: string }[],
         data => {
-          const averageDistance = (max - data.sourcesControllerAverageDistance) / (max - min);
-          const allure =
-            getAllure(averageDistance, data) + Game.map.getRoomLinearDistance(originRoom, data.roomName) * -0.1;
-          return [data.roomName, allure] as [string, number];
+          const averageDistance = (max - data.data.srcCtrlAvgDst) / (max - min);
+          const allure = getAllure(averageDistance, data) + Game.map.getRoomLinearDistance(originRoom, data.key) * -0.1;
+          return [data.key, allure] as [string, number];
         }
       ),
       s => -s[1]
@@ -119,18 +118,18 @@ function getRoomToClaim(originRoom: string): string {
   } else return "";
 }
 
-export function getAllure(averageDistance: number, data: ScoutData): number {
-  const adjacentRooms = _.values<string>(Game.map.describeExits(data.roomName)).filter(r => r != null);
+export function getAllure(averageDistance: number, data: { data: ScoutData; key: string }): number {
+  const adjacentRooms = _.values<string>(Game.map.describeExits(data.key)).filter(r => r != null);
   const howManyAreMine = _.filter(
     adjacentRooms,
     r => Memory.rooms[r] && Object.keys(Memory.rooms[r]).length > 0
   ).length;
   return (
     averageDistance * 0.5 +
-    Math.min(10, _.sum(data.enemies)) * -0.1 +
-    data.sources * 0.2 +
-    data.swampRatio * -0.1 +
-    Math.abs(data.wallRatio - 0.15) * -0.7 -
+    Math.min(10, _.sum(data.data.enemies)) * -0.1 +
+    data.data.sources * 0.2 +
+    data.data.swampRatio * -0.1 +
+    Math.abs(data.data.wallRatio - 0.15) * -0.7 -
     howManyAreMine * 0.2
   );
 }

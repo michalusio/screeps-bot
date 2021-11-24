@@ -18,10 +18,12 @@ export const placeSourceContainers: Placement = {
 export const placeControllerContainers: Placement = {
   name: "Place Controller Containers",
   isPlaced: (room: Room) => {
-    const sourcesList = sourcesAndMineral(room, 1000).filter(
-      s => s instanceof Source || s.pos.lookFor(LOOK_STRUCTURES).some(s => s.structureType === STRUCTURE_EXTRACTOR)
+    const ctrl = room.controller;
+    if (!ctrl) return true;
+    const containerPlaces = ctrl.pos.getAround(2).filter(p => p.getRangeTo(ctrl) > 1);
+    return containerPlaces.some(
+      p => p.lookFor(LOOK_STRUCTURES).filter(s => s.structureType === STRUCTURE_CONTAINER).length > 0
     );
-    return structures(room, 10).filter(s => s.structureType === STRUCTURE_CONTAINER).length > sourcesList.length;
   },
   place: (room: Room) => {
     placeControllerContainerFunc(room);

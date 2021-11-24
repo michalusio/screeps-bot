@@ -1,5 +1,5 @@
 import { initMemHack } from "memhack";
-import { injectMethods } from "utils/declarations";
+import { injectMethods, ScoutData, ScoutDataArray } from "utils/declarations";
 import {
   CreepCounter,
   creepActions,
@@ -10,10 +10,10 @@ import {
   wrapWithCount,
   wrapWithStages
 } from "main-sections";
-import { Bitmap, Color } from "external/console-bitmap";
 import { mySpawns } from "cache/structure-cache";
 import { tryDo } from "try-do";
 import { cacheHits } from "cache/cache-util";
+import { saveSegmentCaches, reclearSegmentCaches, segments } from "cache/segment-cache";
 
 let creepActionsTimings: { [role: string]: [number, number] } = {};
 
@@ -46,22 +46,24 @@ if (!Memory.creepIndex) {
   Memory.creepIndex = 0;
 }
 if (!Memory.noRemoteMining) {
-  Memory.noRemoteMining = ["W4N8"];
+  Memory.noRemoteMining = [];
 }
-if (!Memory.visuals) {
+if (Memory.visuals === undefined) {
   Memory.visuals = true;
 }
-if (!Memory.scoutData) {
-  Memory.scoutData = {};
-}
+
 if (!Memory.rooms) {
   Memory.rooms = {};
 }
 
+RawMemory.setActiveSegments([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
+
 export const loop = (): void => {
   Memory.timings = {};
   Object.keys(cacheHits).forEach(key => (cacheHits[key] = { hits: 0, cpu: 0 }));
+  reclearSegmentCaches();
   body();
+  saveSegmentCaches();
   grafana();
   if (Game.cpu.getUsed() < Game.cpu.tickLimit - 100 && Game.cpu.generatePixel) {
     Game.cpu.generatePixel();
@@ -133,54 +135,4 @@ function grafana(): void {
 
   Memory.stats.cacheHits = cacheHits;
   Memory.stats.timings = Memory.timings;
-}
-
-const bitmapCache = new Map<string, Bitmap>();
-const MY: Color = [0, 255, 38, 255];
-const ENEMY: Color = [180, 33, 50, 255];
-
-function generateBitmapOfRoom(roomName: string): Bitmap {
-  const room = Game.rooms[roomName];
-  if (!bitmapCache.has(roomName)) {
-    const terrainBmp = new Bitmap(50, 50);
-    const terrain = room.lookForAtArea(LOOK_TERRAIN, 0, 0, 49, 49, true);
-
-    terrain.forEach(tile => {
-      const x = tile.x;
-      const y = tile.y;
-      switch (tile.terrain) {
-        case "wall":
-          terrainBmp.setPixel(x, y, [0, 0, 0, 255]);
-          break;
-        case "swamp":
-          terrainBmp.setPixel(x, y, [34, 38, 20, 255]);
-          break;
-        case "plain":
-          terrainBmp.setPixel(x, y, [43, 43, 43, 255]);
-          break;
-      }
-    });
-    bitmapCache.set(roomName, terrainBmp);
-  }
-  const bmp = (bitmapCache.get(roomName) as Bitmap).copy();
-  room.find(FIND_STRUCTURES).forEach(structure => {
-    if (structure instanceof OwnedStructure) {
-      if (structure.my) {
-        bmp.setPixel(structure.pos.x, structure.pos.y, MY);
-      } else {
-        bmp.setPixel(structure.pos.x, structure.pos.y, ENEMY);
-      }
-    } else {
-      bmp.setPixel(structure.pos.x, structure.pos.y, [60, 60, 60, 255]);
-    }
-  });
-  room.find(FIND_CREEPS).forEach(creep => {
-    if (creep.my) {
-      bmp.setPixel(creep.pos.x, creep.pos.y, MY);
-    } else {
-      bmp.setPixel(creep.pos.x, creep.pos.y, ENEMY);
-    }
-  });
-
-  return bmp;
 }

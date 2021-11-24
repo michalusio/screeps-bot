@@ -8,7 +8,7 @@ export function tryDoOrMove(
   doMove: () => MoveToReturnCode
 ): ScreepsReturnCode | PERFORMED_ACTION {
   const doCode = doAction();
-  if (doCode === ERR_NOT_IN_RANGE) {
+  if (doCode === ERR_NOT_IN_RANGE || doCode === ERR_NOT_ENOUGH_RESOURCES) {
     return doMove();
   }
   return doCode === OK ? PERFORMED_ACTION : doCode;

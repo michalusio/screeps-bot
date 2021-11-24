@@ -5,17 +5,28 @@ import { injectRoomPositionMethods } from "./room-position";
 import { injectStructureSpawnMethods } from "./structure-spawn";
 
 export interface ScoutData {
-  roomName: string;
   tick: number;
   enemies: { [player: string]: number };
   enemyStructures: { [player: string]: number };
   spawn: boolean;
   sources: number;
-  controllerLvl: number | null;
-  sourcesControllerAverageDistance: number;
+  ctrlLvl: number | null;
+  srcCtrlAvgDst: number;
   swampRatio: number;
   wallRatio: number;
 }
+
+export type ScoutDataArray = [
+  number, // tick
+  boolean, // spawn
+  number, // sources
+  number | null, // controllerLevel
+  number, // sourcesControllerAverageDistance
+  number, // swampRatio
+  number, // wallRatio
+  { [player: string]: number }, // enemies
+  { [player: string]: number } // enemyStructures
+];
 
 declare global {
   interface String {
@@ -26,7 +37,6 @@ declare global {
     creepIndex: number;
     noRemoteMining: string[];
     visuals: boolean;
-    scoutData: { [key: string]: ScoutData };
     afterReset: boolean;
     visualizer: string[];
     timings: { [key: string]: number };
@@ -77,15 +87,6 @@ declare global {
         [key: string]: number;
       };
     };
-  }
-
-  interface RoomMemory {
-    civilizationLevel: number;
-    orders: { [role: string]: number };
-    wallRepairs: number;
-    prioritizeBuilding: boolean;
-    mode: string;
-    children: string[];
   }
 
   interface FlagMemory {

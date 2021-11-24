@@ -2,6 +2,7 @@ import { activeSources } from "cache/source-cache";
 import { hostileSpawns, mySpawns } from "cache/structure-cache";
 import { energyContainerNotFull, fillBody, getByIdOrNew, tryDoOrMove } from "utils/creeps";
 import { log } from "utils/log";
+import { getRoomsAround, isRoomRemoteSafe } from "utils/room-utils";
 
 import { CreepRemoteMemory, stateChanger } from "../utils/creeps/role-memory";
 
@@ -21,7 +22,7 @@ export interface RemoteMinerMemory extends CreepRemoteMemory {
   state: "mining" | "hauling";
 }
 
-export const remoteMinerBody = fillBody.bind(undefined, 20, [WORK, MOVE, CARRY, MOVE]);
+export const remoteMinerBody = fillBody.bind(undefined, 20, [MOVE, MOVE, WORK, CARRY]);
 
 export const remoteMinerMemory: RemoteMinerMemory = {
   newCreep: true,
@@ -37,8 +38,8 @@ export function remoteMinerBehavior(creep: Creep): void {
   const creepMemory = remoteMiner.memory;
   if (creepMemory.sourceRoom === undefined) {
     creepMemory.sourceRoom = minBy(
-      _.values<string>(Game.map.describeExits(creepMemory.originRoom)).filter(
-        name => name != null && !Memory.noRemoteMining.includes(name)
+      getRoomsAround(creepMemory.originRoom).filter(
+        name => name != null && isRoomRemoteSafe(name) && !Memory.noRemoteMining.includes(name)
       ),
       r =>
         Object.keys(Game.creeps)
@@ -46,7 +47,13 @@ export function remoteMinerBehavior(creep: Creep): void {
           .filter(c => c.roleMemory.role === "remoteminer" && (c.roleMemory as RemoteMinerMemory).sourceRoom === r)
           .length
     );
-    log(`Remote miner ${remoteMiner.name} chose source room: ${creepMemory.sourceRoom}`);
+    if (creepMemory.sourceRoom) {
+      log(`Remote miner ${remoteMiner.name} chose source room: ${creepMemory.sourceRoom}`);
+      const remotes = Memory.rooms[creepMemory.originRoom].remotes;
+      if (!remotes.includes(creepMemory.sourceRoom)) {
+        remotes.push(creepMemory.sourceRoom);
+      }
+    } else log(`Remote miner ${remoteMiner.name} chose source room: ${creepMemory.sourceRoom}`);
   }
   switch (creepMemory.state) {
     case "mining":
@@ -64,6 +71,11 @@ export function remoteMinerBehavior(creep: Creep): void {
           if (spawns > 0) {
             if (!Memory.noRemoteMining.includes(creep.room.name)) {
               Memory.noRemoteMining.push(creep.room.name);
+              _.forEach(Memory.rooms, r => {
+                if (r.remotes) {
+                  r.remotes = r.remotes.filter(r => r !== creep.room.name);
+                }
+              });
             }
             creepMemory.sourceRoom = undefined;
             return;
@@ -76,34 +88,37 @@ export function remoteMinerBehavior(creep: Creep): void {
           }
         }
         const source = creepMemory.sourcePoint;
-        const code = source
-          ? tryDoOrMove(() => {
-              if (creepMemory.sourceRoom !== remoteMiner.room.name) return ERR_NOT_IN_RANGE;
-              if (!creepMemory.sourcePoint || !creepMemory.sourceRoom || !Game.rooms[creepMemory.sourceRoom])
-                return ERR_NOT_IN_RANGE;
-              const src = Game.rooms[creepMemory.sourceRoom].lookForAt(
-                LOOK_SOURCES,
-                creepMemory.sourcePoint.x,
-                creepMemory.sourcePoint.y
-              )[0];
-              return remoteMiner.harvest(src);
-            }, remoteMiner.travelTo(new RoomPosition(source.x, source.y, source.roomName), undefined, { ignoreCreeps: false, ignoreRoads: false, reusePath: 50 }))
-          : tryDoOrMove(
-              () => ERR_NOT_IN_RANGE,
-              remoteMiner.travelTo(
-                new RoomPosition(
-                  creepMemory.sourcePoint?.x ?? 25,
-                  creepMemory.sourcePoint?.y ?? 25,
-                  creepMemory.sourceRoom
-                ),
-                undefined,
-                {
-                  ignoreCreeps: false,
-                  ignoreRoads: false,
-                  reusePath: 50
-                }
-              )
-            );
+        let code = 0;
+        if (source) {
+          code = tryDoOrMove(() => {
+            if (creepMemory.sourceRoom !== remoteMiner.room.name) return ERR_NOT_IN_RANGE;
+            if (!creepMemory.sourcePoint || !creepMemory.sourceRoom || !Game.rooms[creepMemory.sourceRoom])
+              return ERR_NOT_IN_RANGE;
+            const src = Game.rooms[creepMemory.sourceRoom].lookForAt(
+              LOOK_SOURCES,
+              creepMemory.sourcePoint.x,
+              creepMemory.sourcePoint.y
+            )[0];
+            return remoteMiner.harvest(src);
+          }, remoteMiner.travelTo(new RoomPosition(source.x, source.y, source.roomName), undefined, { ignoreCreeps: false, ignoreRoads: false, reusePath: 50 }));
+        } else {
+          code = tryDoOrMove(
+            () => ERR_NOT_IN_RANGE,
+            remoteMiner.travelTo(
+              new RoomPosition(
+                creepMemory.sourcePoint?.x ?? Math.floor(Math.random() * 50),
+                creepMemory.sourcePoint?.y ?? Math.floor(Math.random() * 50),
+                creepMemory.sourceRoom
+              ),
+              undefined,
+              {
+                ignoreCreeps: false,
+                ignoreRoads: false,
+                reusePath: 50
+              }
+            )
+          );
+        }
         if (code === ERR_NOT_ENOUGH_RESOURCES) {
           changeState("hauling", remoteMiner);
         }

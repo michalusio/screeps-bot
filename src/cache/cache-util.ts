@@ -1,9 +1,16 @@
+import { SegmentCache } from "./segment-cache";
+
 type KeysOfType<T, U, B = false> = {
   [P in keyof T]: B extends true ? (T[P] extends U ? (U extends T[P] ? P : never) : never) : T[P] extends U ? P : never;
 }[keyof T];
 
 export const cacheHits: { [key: string]: { hits: number; cpu: number } } = {};
 
+export type KeyCache<S extends string, T> = {
+  (key: S, time: number): T;
+  has(key: S, time: number): boolean;
+  set(key: S, value: T): void;
+};
 export type RoomCache<T> = ((room: Room, time: number) => T) & { has(room: Room, time: number): boolean };
 export type StructCache<U, T> = ((struct: U, time: number) => T) & {
   has(struct: U, time: number): boolean;
@@ -25,20 +32,83 @@ export function cache<T>(name: string, get: () => T): (time: number) => T {
   };
 }
 
-export function cacheForKey<S extends string, T>(name: string, get: (key: S) => T): (key: S, time: number) => T {
+export function cacheForKey<S extends string, T>(
+  name: string,
+  get: (key: S, previousValue: T | undefined) => T
+): KeyCache<S, T> {
   const cache: Map<string, [T, number]> = new Map();
-  return (key: S, time: number) => {
-    let cacheValue = cache.get(key);
-    if (!cacheValue || Game.time - cacheValue[1] > time) {
-      if (!cacheHits[name]) cacheHits[name] = { hits: 0, cpu: 0 };
-      const cpuBefore = Game.cpu.getUsed();
-      cacheValue = [get(key), Game.time];
-      cacheHits[name].hits++;
-      cacheHits[name].cpu += Game.cpu.getUsed() - cpuBefore;
-      cache.set(key, cacheValue);
+  return Object.assign(
+    (key: S, time: number) => {
+      let cacheValue = cache.get(key);
+      if (!cacheValue || Game.time - cacheValue[1] > time) {
+        if (!cacheHits[name]) cacheHits[name] = { hits: 0, cpu: 0 };
+        const cpuBefore = Game.cpu.getUsed();
+        cacheValue = [get(key, cacheValue ? cacheValue[0] : undefined), Game.time];
+        cacheHits[name].hits++;
+        cacheHits[name].cpu += Game.cpu.getUsed() - cpuBefore;
+        cache.set(key, cacheValue);
+      }
+      return cacheValue[0];
+    },
+    {
+      has: (key: S, time: number) => {
+        const item = cache.get(key);
+        return item != null ? Game.time - item[1] <= time : false;
+      },
+      set: (key: S, value: T) => {
+        cache.set(key, [value, Game.time]);
+      }
     }
-    return cacheValue[0];
-  };
+  );
+}
+
+export function cacheForKeyInSegment<S extends string, T>(
+  name: string,
+  memoryLocation: () => SegmentCache<Partial<Record<string, T>>>,
+  get: (key: S, previousValue: T | undefined) => T
+): KeyCache<S, T> {
+  const cache = cacheForKey<S, T>(name, get);
+  return Object.assign(
+    (key: S, time: number) => {
+      const memoryData = memoryLocation();
+      if (!cache.has(key, 99999)) {
+        let value: T;
+        const memory = memoryData.get();
+        const memoryKey = memory[key];
+        if (memoryKey == null) {
+          value = get(key, undefined);
+          memory[key] = value;
+          memoryData.commit();
+        } else {
+          value = memoryKey;
+        }
+        cache.set(key, value);
+        return cache(key, time);
+      } else {
+        const value = cache(key, time);
+        if (Game.time % 10 === 0) {
+          const memory = memoryData.get();
+          memory[key] = value;
+          memoryData.commit();
+        }
+        return value;
+      }
+    },
+    {
+      has: (key: S, time: number) => {
+        const inCache = cache.has(key, time);
+        if (inCache) return true;
+        return memoryLocation().get()[key] != null;
+      },
+      set: (key: S, value: T) => {
+        cache.set(key, value);
+        const memoryData = memoryLocation();
+        const memory = memoryData.get();
+        memory[key] = value;
+        memoryData.commit();
+      }
+    }
+  );
 }
 
 export function cacheForStruct<U, T>(

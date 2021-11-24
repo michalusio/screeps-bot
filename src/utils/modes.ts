@@ -5,15 +5,15 @@ import { placeTower } from "placements/place-tower";
 import { rcl } from "placements/rcl";
 import { roadsBetweenSources } from "placements/roads-between-sources";
 import { roadsToController } from "placements/roads-to-controller";
-import { roadsToExits } from "placements/roads-to-exits";
 import { roadsToSources } from "placements/roads-to-sources";
 import { link, storage } from "placements/storage-and-link";
 import { canClaim } from "placements/can-claim";
-import { constructionSites, mySpawns } from "cache/structure-cache";
+import { anyConstructionSitesIncludingRemotes, mySpawns } from "cache/structure-cache";
 import { droppedEnergy } from "cache/source-cache";
 import { extractor } from "placements/extractor";
 import { rampartize } from "placements/rampartize";
 import { rampartizeAndFill } from "placements/rampartize-fill";
+import { roadsToRemotes } from "placements/roads-to-remotes";
 
 export interface RoleRequirements {
   [key: string]: number;
@@ -38,7 +38,7 @@ export const Bootstrap: RoomMode = {
   canLeave: (room: Room): boolean => (room.controller?.level ?? -1) >= 6,
   stages: (room: Room): Stage[] => {
     const anyEnemies = room.find(FIND_HOSTILE_CREEPS).length > 0 ? 1 : 0;
-    const builderMod = constructionSites(room, 5).length > 0 ? 1 : 0;
+    const builderMod = anyConstructionSitesIncludingRemotes(room) ? 1 : 0;
     const energyLayingAroundMod = Math.min(2, Math.floor(_.sum(droppedEnergy(room, 1), e => e.amount) / 750));
     const fullRCL = (room.controller?.level ?? -1) === 8;
     const RCL3 = (room.controller?.level ?? -1) <= 3;
@@ -57,9 +57,9 @@ export const Bootstrap: RoomMode = {
       },
       { roles: {}, structures: [placeTower(1)] },
       { roles: {}, structures: [roadsBetweenSources] },
-      { roles: { remoteminer: 4 }, structures: [roadsToExits, rcl(4), extensionPlacer(20)] },
+      { roles: { remoteminer: 4 }, structures: [roadsToRemotes, rcl(4), extensionPlacer(20)] },
       {
-        roles: { remoteminer: 6, scout: 1 },
+        roles: { remoteminer: 8, scout: 1 },
         structures: [storage, rampartize, rampartizeAndFill, rcl(5), placeTower(2), link, extensionPlacer(30)],
         wallRepair: 10000
       }
@@ -76,7 +76,7 @@ export const Scouting: RoomMode = {
     return [
       ...Bootstrap.stages(room),
       {
-        roles: { scout: 3, upgrader: 4, miner: 3 },
+        roles: { scout: 3, upgrader: 3, miner: 3, remoteminer: 10 },
         structures: [extensionPlacer(40), extractor],
         wallRepair: 50000
       },
@@ -108,7 +108,7 @@ export const Colonizing: RoomMode = {
     return [
       ...Bootstrap.stages(room),
       {
-        roles: { miner: 3 },
+        roles: { miner: 3, remoteminer: 10 },
         structures: [
           extensionPlacer(40),
           extractor,

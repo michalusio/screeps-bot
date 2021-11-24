@@ -1,4 +1,6 @@
+import { segments } from "cache/segment-cache";
 import { sourcesAndMineral } from "cache/source-cache";
+import { ScoutData } from "utils/declarations";
 import { CreepRemoteMemory } from "../utils/creeps/role-memory";
 
 export interface Scout extends Creep {
@@ -45,8 +47,8 @@ export function scoutBehavior(creep: Creep): void {
         let pos: RoomPosition | null = creepMemory.exitPosition
           ? new RoomPosition(creepMemory.exitPosition.x, creepMemory.exitPosition.y, creepMemory.exitPosition.room)
           : null;
-        if (pos?.roomName !== creep.room.name) {
-          performScouting(creep);
+        if (pos?.roomName !== scout.room.name) {
+          performScouting(scout);
           pos = null;
         }
         if (!pos) {
@@ -56,7 +58,7 @@ export function scoutBehavior(creep: Creep): void {
           do {
             dir = randomExit();
             tries--;
-          } while (tries > 0 && (dir === reverseLastDirection || !(pos = creep.pos.findClosestByPath(dir))));
+          } while (tries > 0 && (dir === reverseLastDirection || !(pos = scout.pos.findClosestByPath(dir))));
           if (!pos) {
             creepMemory.exitPosition = null;
             return;
@@ -64,22 +66,23 @@ export function scoutBehavior(creep: Creep): void {
           creepMemory.lastDirection = dir;
           creepMemory.exitPosition = { x: pos.x, y: pos.y, room: pos.roomName };
         }
-        creep.travelInto(pos, undefined, { reusePath: 100 });
+        scout.travelInto(pos, undefined, { reusePath: 100 });
       }
       break;
   }
 }
 
-function performScouting(creep: Creep) {
+function performScouting(creep: Scout) {
+  const currentScoutData = segments.scoutData.get();
   let swampRatio = 0;
   let wallRatio = 0;
-  let sourcesControllerAverageDistance = 0;
+  let srcCtrlAvgDst = 0;
   {
-    const previousData = Memory.scoutData[creep.room.name];
+    const previousData = currentScoutData[creep.room.name];
     if (previousData) {
       swampRatio = previousData.swampRatio;
       wallRatio = previousData.wallRatio;
-      sourcesControllerAverageDistance = previousData.sourcesControllerAverageDistance;
+      srcCtrlAvgDst = previousData.srcCtrlAvgDst;
     } else {
       const terrain = creep.room.getTerrain();
       for (let x = 0; x < 50; x++) {
@@ -98,9 +101,9 @@ function performScouting(creep: Creep) {
       const sourcesPos = sourcesAndMineral(creep.room, 1000).map(s => s.pos);
       const controller = creep.room.controller;
       if (!controller || sourcesPos.length === 0) {
-        sourcesControllerAverageDistance = 100;
+        srcCtrlAvgDst = 100;
       } else {
-        sourcesControllerAverageDistance =
+        srcCtrlAvgDst =
           sourcesPos.reduce(
             (acc, s) =>
               acc +
@@ -120,10 +123,9 @@ function performScouting(creep: Creep) {
     }
   }
 
-  Memory.scoutData[creep.room.name] = {
-    roomName: creep.room.name,
+  const data: ScoutData = {
     tick: Game.time,
-    controllerLvl: creep.room.controller?.level ?? null,
+    ctrlLvl: creep.room.controller?.level ?? null,
     sources: sourcesAndMineral(creep.room, 1000).length,
     spawn:
       creep.room.find(FIND_CONSTRUCTION_SITES).filter(s => s.structureType === "spawn").length +
@@ -131,11 +133,14 @@ function performScouting(creep: Creep) {
       0,
     swampRatio,
     wallRatio,
-    sourcesControllerAverageDistance,
+    srcCtrlAvgDst,
     enemies: _.countBy(creep.room.find(FIND_HOSTILE_CREEPS), c => c.owner.username),
     enemyStructures: _.countBy(
       creep.room.find(FIND_HOSTILE_STRUCTURES).filter(s => s.structureType !== "powerBank"),
       s => s.owner?.username ?? "none"
     )
   };
+
+  currentScoutData[creep.room.name] = data;
+  segments.scoutData.commit();
 }

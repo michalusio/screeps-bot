@@ -1,6 +1,7 @@
 import { HOSTILE_CREEP_AVOID_ZONE_SIZE, MY_CREEP_PATH_COST } from "configs";
-import { cacheForKey } from "./cache-util";
+import { cacheForKey, cacheForKeyInSegment } from "./cache-util";
 import { creepMyAndPositions } from "./creep-cache";
+import { segments } from "./segment-cache";
 import { constructionSites, structures } from "./structure-cache";
 
 const costMatrixTerrainCache = cacheForKey("cost matrix terrain", (roomNameAndMod: `${string}|${number}`) => {
@@ -18,7 +19,7 @@ const costMatrixTerrainCache = cacheForKey("cost matrix terrain", (roomNameAndMo
           matrix.set(x, y, 5 + 5 * modifier);
           break;
         case 0:
-          matrix.set(x, y, 2.5 * modifier);
+          matrix.set(x, y, Math.max(1, 2.5 * modifier));
           break;
       }
     }
@@ -26,16 +27,18 @@ const costMatrixTerrainCache = cacheForKey("cost matrix terrain", (roomNameAndMo
   return matrix;
 });
 
-export const costMatrixCache = cacheForKey(
+export const costMatrixCache = cacheForKeyInSegment(
   "cost matrix",
-  (data: `${string}|${boolean}|${boolean}|${boolean}|${number}`) => {
+  () => segments.pathData,
+  (data: `${string}|${boolean}|${boolean}|${boolean}|${number}`, previousValue: CostMatrix | undefined) => {
     const [roomName, ir, icr, ico, moveMod] = data.split("|");
     const ignoreRoads = ir === "true";
     const ignoreCreeps = icr === "true";
     const ignoreContainers = ico === "true";
     const moveModifier = moveMod ? parseFloat(moveMod) : 0;
-    let matrix = costMatrixTerrainCache(`${roomName}|${moveMod}` as `${string}|${number}`, 999999);
     const room = Game.rooms[roomName];
+    if (!room && previousValue) return previousValue;
+    let matrix = costMatrixTerrainCache(`${roomName}|${moveMod}` as `${string}|${number}`, 999999);
     if (!room) return matrix;
     matrix = matrix.clone();
     if (!ignoreCreeps) {
@@ -48,7 +51,7 @@ export const costMatrixCache = cacheForKey(
       if (s.structureType === STRUCTURE_ROAD) {
         if (!ignoreRoads && matrix.get(s.pos.x, s.pos.y) < 11) {
           // Favor roads over plain tiles
-          matrix.set(s.pos.x, s.pos.y, moveModifier);
+          matrix.set(s.pos.x, s.pos.y, moveModifier < 1 ? 1 : moveModifier);
         }
       } else if (s.structureType !== STRUCTURE_CONTAINER && s.structureType !== STRUCTURE_RAMPART) {
         // Can't walk through non-walkable buildings

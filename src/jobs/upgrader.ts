@@ -29,7 +29,7 @@ export function upgraderBehavior(creep: Creep): void {
   switch (creepMemory.state) {
     case "sourcing":
       {
-        const source = getByIdOrNew(creepMemory.sourcePoint, energyContainerNotEmpty(upgrader, true));
+        const source = getByIdOrNew(creepMemory.sourcePoint, energyContainerNotEmpty(upgrader.room, upgrader, true));
         if (!source) {
           changeState("sourcing", upgrader);
           if (Game.time % 3 === 0) upgrader.wander();

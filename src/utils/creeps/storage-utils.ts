@@ -14,18 +14,19 @@ type PerRoomNotEmptyContainerCache = {
 const notEmptyContainerCache: { [room: string]: PerRoomNotEmptyContainerCache } = {};
 
 export function energyContainerNotEmpty(
+  room: Room,
   creep: Creep,
   omitSourceContainers = false
 ): () => StructureContainer | StructureStorage | StructureSpawn | undefined {
   return () => {
-    if (!notEmptyContainerCache[creep.room.name]) {
-      notEmptyContainerCache[creep.room.name] = { value: [[], []], time: 0 };
+    if (!notEmptyContainerCache[room.name]) {
+      notEmptyContainerCache[room.name] = { value: [[], []], time: 0 };
     }
-    const notEmptyCache = notEmptyContainerCache[creep.room.name];
+    const notEmptyCache = notEmptyContainerCache[room.name];
     if (notEmptyCache.time !== Game.time) {
       notEmptyCache.value[0] = omitSourceContainers
-        ? energyStoragesWithoutSourcedCache(creep.room, 100)
-        : energyStorages(creep.room);
+        ? energyStoragesWithoutSourcedCache(room, 100)
+        : energyStorages(room);
       notEmptyCache.value[1] = notEmptyCache.value[0].filter(
         s => s.store.getUsedCapacity(RESOURCE_ENERGY) > ENERGY_NOT_EMPTY_MARK
       );
@@ -34,11 +35,9 @@ export function energyContainerNotEmpty(
     const filtered = notEmptyCache.value[0];
     const withEnergy = notEmptyCache.value[1];
     return (
-      minBy(withEnergy, emptyByStructureTypeThenRange(creep)) ??
+      minBy(withEnergy, emptyByStructureTypeThenRange(creep, room)) ??
       (filtered.length === 0
-        ? _.sample(
-            mySpawns(creep.room).filter(s => s.store.getUsedCapacity(RESOURCE_ENERGY) > ENERGY_NOT_EMPTY_SPAWN_MARK)
-          )
+        ? _.sample(mySpawns(room).filter(s => s.store.getUsedCapacity(RESOURCE_ENERGY) > ENERGY_NOT_EMPTY_SPAWN_MARK))
         : undefined)
     );
   };
@@ -74,7 +73,9 @@ function fillByStructureTypeThenRange(
 }
 
 function emptyByStructureTypeThenRange(
-  creep: Creep
+  creep: Creep,
+  room: Room
 ): (s: StructureContainer | StructureStorage | StructureExtension | StructureSpawn) => number {
-  return s => EMPTY_PRIORITY[s.structureType] * 10000 + s.pos.getRangeTo(creep.pos);
+  return s =>
+    EMPTY_PRIORITY[s.structureType] * 10000 + (room.name === creep.room.name ? s.pos.getRangeTo(creep.pos) : 0);
 }

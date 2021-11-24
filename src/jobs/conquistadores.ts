@@ -118,7 +118,10 @@ export function conquistadoresBehavior(creep: Creep): void {
     case "sourcing":
       {
         if (conquistadores.room.name === creepMemory.originRoom) {
-          const storage = getByIdOrNew(creepMemory.sourcePoint, energyContainerNotEmpty(conquistadores, true));
+          const storage = getByIdOrNew(
+            creepMemory.sourcePoint,
+            energyContainerNotEmpty(conquistadores.room, conquistadores, true)
+          );
           if (!storage) break;
           if (!storage.store || storage.store.getUsedCapacity(RESOURCE_ENERGY) === 0) {
             changeState("sourcing", conquistadores);

@@ -84,7 +84,12 @@ export function minerBehavior(creep: Creep): void {
                   visualizePathStyle: { stroke: "#ff0000" }
                 })
             );
-          } else tryDoOrMove(() => miner.harvest(source), miner.travelTo(source, undefined, { ignoreCreeps: true }));
+          } else {
+            tryDoOrMove(
+              () => miner.harvest(source),
+              miner.travelTo(source, undefined, { ignoreCreeps: true, range: 1 })
+            );
+          }
         }
       }
       break;

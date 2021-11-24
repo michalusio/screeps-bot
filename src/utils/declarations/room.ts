@@ -5,6 +5,16 @@ declare global {
     createConstructionSiteIfEmpty(x: number, y: number, type: BuildableStructureConstant): ScreepsReturnCode;
     createConstructionSiteForced(x: number, y: number, type: BuildableStructureConstant): ScreepsReturnCode;
   }
+
+  interface RoomMemory {
+    civilizationLevel: number;
+    orders: { [role: string]: number };
+    wallRepairs: number;
+    prioritizeBuilding: boolean;
+    mode: string;
+    children: string[];
+    remotes: string[];
+  }
 }
 
 export function injectRoomMethods(): void {
